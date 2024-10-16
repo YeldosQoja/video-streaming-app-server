@@ -28,13 +28,16 @@
   },
   "homepage": "https://github.com/YeldosQoja/video-streaming-app-server#readme",
   "dependencies": {
+    "@neondatabase/serverless": "^0.9.5",
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.3",
+    "drizzle-orm": "^0.33.0",
     "express": "^4.19.2",
     "typescript": "^5.5.4"
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.24.2",
     "nodemon": "^3.1.4"
   }
 }
