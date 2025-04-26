@@ -12,30 +12,27 @@ const router = express.Router();
 const ITERATIONS = 310000;
 
 passport.use(
-  new LocalStrategy(async function verify(username, password, cb) {
+  new LocalStrategy(async (username, password, cb) => {
     try {
       const userRow = await db
         .select()
         .from(users)
         .where(eq(users.username, username));
-      if (!userRow || !userRow[0]) {
-        return cb(null, false, { message: "Incorrect email or password!!!" });
-      }
       const user = userRow[0];
       if (!user) {
         return cb(null, false, { message: "Incorrect email or password!!!" });
       }
+      const { salt } = user;
       crypto.pbkdf2(
         password,
-        "1234567890", // should figure out a way to generate unique salt strings for each user later
+        salt,
         ITERATIONS,
         32,
         "sha256",
-        function (err, hashedPassword) {
+        (err, hashedPassword) => {
           if (err) {
             return cb(err);
           }
-          console.log("bytes per element", hashedPassword.BYTES_PER_ELEMENT);
           const buffer = new Buffer(user.password);
           if (!crypto.timingSafeEqual(buffer, hashedPassword)) {
             return cb(null, false, {
@@ -51,19 +48,43 @@ passport.use(
   })
 );
 
-passport.serializeUser(function (user, cb) {
-  process.nextTick(function () {
-    cb(null, { id: user.id, username: user.email });
+passport.serializeUser((user, cb) => {
+  process.nextTick(() => {
+    cb(null, user.id);
   });
 });
 
-passport.deserializeUser(function (user, cb) {
-  process.nextTick(function () {
-    return cb(null, user);
+passport.deserializeUser((id: number, cb) => {
+  process.nextTick(() => {
+    db.select()
+      .from(users)
+      .where(eq(users.id, id))
+      .then((row) => {
+        console.log(row);
+        cb(null, row[0]);
+      })
+      .catch((err) => {
+        cb(err, null);
+      });
   });
 });
 
-router.post("/signup", (req, res, next) => {
+router.post("/login", (req, res, next) => {
+  passport.authenticate(
+    "local",
+    (err: any, user: Express.User, info: any, status: number) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.json({ err: info });
+      }
+      res.status(200).json({ msg: "Login successful!" });
+    }
+  )(req, res, next);
+});
+
+router.post("/signup", async (req, res, next) => {
   const { firstName, lastName, username, email, password } = req.body;
   const salt = crypto.randomBytes(16);
   crypto.pbkdf2(
@@ -77,16 +98,26 @@ router.post("/signup", (req, res, next) => {
         return next(err);
       }
       try {
-        await db.insert(users).values({
-          firstName,
-          lastName,
-          email,
-          password: hashedPassword.toString("utf-8"),
-          username,
-          salt: String.fromCharCode(...salt),
+        const insertedUser = await db
+          .insert(users)
+          .values({
+            firstName,
+            lastName,
+            email,
+            password: hashedPassword.toString("utf-8"),
+            username,
+            salt: String.fromCharCode(...salt),
+          })
+          .returning({ id: users.id, username: users.username });
+        const user = insertedUser[0] as Express.User;
+        req.login(user, (err) => {
+          if (err) {
+            throw err;
+          }
+          console.log("session saved!");
+          res.status(200).json({ user, msg: "User created!" });
         });
-      } catch(err) {
-        console.log(err);
+      } catch (err) {
         next(err);
       }
     }

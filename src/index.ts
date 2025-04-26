@@ -8,8 +8,6 @@ import indexRouter from "./routes";
 import authRouter from "./routes/auth";
 
 export const app = express();
-dotenv.config();
-const port = process.env["PORT"];
 
 app.use(
   session({
@@ -25,9 +23,13 @@ app.use(
 );
 
 app.use(passport.authenticate("session"));
+app.use(express.json());
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
+
+dotenv.config();
+const port = process.env["PORT"];
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
