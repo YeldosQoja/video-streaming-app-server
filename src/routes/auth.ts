@@ -5,7 +5,6 @@ import { db } from "../db";
 import { users } from "../db/models/users.sql";
 import { eq } from "drizzle-orm";
 import * as crypto from "node:crypto";
-import { Buffer } from "node:buffer";
 
 const router = express.Router();
 
@@ -20,7 +19,9 @@ passport.use(
         .where(eq(users.username, username));
       const user = userRow[0];
       if (!user) {
-        return cb(null, false, { message: "Incorrect email or password!!!" });
+        return cb(null, false, {
+          message: "There is no such user with username " + username,
+        });
       }
       const { salt } = user;
       crypto.pbkdf2(
@@ -33,10 +34,9 @@ passport.use(
           if (err) {
             return cb(err);
           }
-          const buffer = new Buffer(user.password);
-          if (!crypto.timingSafeEqual(buffer, hashedPassword)) {
+          if (!crypto.timingSafeEqual(user.password, hashedPassword)) {
             return cb(null, false, {
-              message: "Incorrect username or password.",
+              message: "Incorrect password.",
             });
           }
           return cb(null, user);
@@ -104,11 +104,12 @@ router.post("/signup", async (req, res, next) => {
             firstName,
             lastName,
             email,
-            password: hashedPassword.toString("utf-8"),
+            password: hashedPassword,
             username,
-            salt: String.fromCharCode(...salt),
+            salt,
           })
           .returning({ id: users.id, username: users.username });
+        console.log({ insertedUser });
         const user = insertedUser[0] as Express.User;
         req.login(user, (err) => {
           if (err) {
