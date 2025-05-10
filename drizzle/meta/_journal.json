@@ -43,6 +43,13 @@
       "when": 1746878096141,
       "tag": "0005_fuzzy_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1746888449615,
+      "tag": "0006_premium_gertrude_yorkes",
+      "breakpoints": true
     }
   ]
 }

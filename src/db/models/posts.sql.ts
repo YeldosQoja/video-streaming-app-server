@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
   integer,
   pgTable,
@@ -10,7 +9,9 @@ import { users } from "./users.sql";
 
 export const posts = pgTable("posts", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity().unique(),
-  authorId: integer("author_id"),
+  author: integer("author")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
   thumbnailUrl: varchar("thumbnail_url", { length: 120 }).notNull(),
   title: varchar("title", { length: 60 }).notNull(),
   desc: text("desc"),
@@ -19,14 +20,3 @@ export const posts = pgTable("posts", {
     withTimezone: true,
   }),
 });
-
-export const usersRelations = relations(users, ({ many }) => ({
-  posts: many(posts),
-}));
-
-export const postsRelations = relations(posts, ({ one }) => ({
-  author: one(users, {
-    fields: [posts.authorId],
-    references: [users.id],
-  }),
-}));
