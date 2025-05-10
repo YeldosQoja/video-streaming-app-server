@@ -36,6 +36,13 @@
       "when": 1745692261508,
       "tag": "0004_outgoing_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1746878096141,
+      "tag": "0005_fuzzy_jubilee",
+      "breakpoints": true
     }
   ]
 }
