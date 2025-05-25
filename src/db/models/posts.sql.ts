@@ -12,7 +12,8 @@ export const posts = pgTable("posts", {
   author: integer("author")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  thumbnailUrl: varchar("thumbnail_url", { length: 120 }).notNull(),
+  key: varchar("key", { length: 60 }).notNull(),
+  thumbnailKey: varchar("thumbnail_key", { length: 60 }).notNull(),
   title: varchar("title", { length: 60 }).notNull(),
   desc: text("desc"),
   createdAt: timestamp("created_at", {

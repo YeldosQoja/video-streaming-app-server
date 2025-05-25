@@ -6,6 +6,7 @@ import { pool } from "./db";
 import * as passport from "passport";
 import indexRouter from "./routes";
 import authRouter from "./routes/auth";
+import postsRouter from "./routes/posts";
 
 export const app = express();
 
@@ -27,6 +28,7 @@ app.use(express.json());
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
+app.use("/posts", postsRouter);
 
 dotenv.config();
 const port = process.env["PORT"];
