@@ -27,8 +27,9 @@ router.post("/create", async (req, res) => {
     await db.insert(posts).values({
       author: req.user.id,
       desc,
-      key,
-      thumbnailKey,
+      publicKey: nanoid(),
+      storageKey: key,
+      thumbnailStorageKey: thumbnailKey,
       title,
     });
 

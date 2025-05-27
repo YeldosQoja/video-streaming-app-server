@@ -12,8 +12,13 @@ export const posts = pgTable("posts", {
   author: integer("author")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  key: varchar("key", { length: 60 }).notNull(),
-  thumbnailKey: varchar("thumbnail_key", { length: 60 }).notNull(),
+  publicKey: varchar("public_key", { length: 60 }).unique().notNull(),
+  storageKey: varchar("storage_key", { length: 60 }).unique().notNull(),
+  thumbnailStorageKey: varchar("thumbnail_storage_key", {
+    length: 60,
+  })
+    .unique()
+    .notNull(),
   title: varchar("title", { length: 60 }).notNull(),
   desc: text("desc"),
   createdAt: timestamp("created_at", {
