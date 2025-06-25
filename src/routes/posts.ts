@@ -11,6 +11,13 @@ import { db } from "../db";
 import { posts } from "../db/models/posts.sql";
 import { nanoid } from "nanoid";
 
+import {
+  MediaConvertClient,
+  CreateJobCommand,
+} from "@aws-sdk/client-mediaconvert";
+
+const mediaConvertClient = new MediaConvertClient();
+
 const router = express.Router();
 
 router.post("/create", async (req, res) => {
@@ -41,28 +48,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-router.post("/upload/thumbnail", async (req, res) => {
-  const { contentType } = req.body;
-
-  const thumbnailId = nanoid();
-  const key = `thumbnails/${thumbnailId}.${contentType}`;
-
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-    ContentType: contentType,
-  });
-
-  const url = await getSignedUrl(s3Client, command);
-
-  res.status(200).send({
-    msg: "Success!",
-    url,
-    key,
-  });
-});
-
-router.post("/start-upload", async (req, res) => {
+router.post("/upload-thumbnail", async (req, res) => {
   try {
     const { contentType } = req.body;
 
@@ -73,8 +59,42 @@ router.post("/start-upload", async (req, res) => {
       return;
     }
 
+    const thumbnailId = nanoid();
+    const key = `uploads/${req.user.username}/thumbnails/${thumbnailId}.${contentType}`;
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const url = await getSignedUrl(s3Client, command);
+
+    res.status(200).send({
+      msg: "Success!",
+      url,
+      key,
+    });
+  } catch (err) {
+    res.status(400).send({
+      msg: "Error!",
+    });
+  }
+});
+
+router.post("/start-upload", async (req, res) => {
+  try {
+    const { contentType, parts } = req.body;
+
+    if (!req.user) {
+      res
+        .status(401)
+        .send({ err: "Unauthenticated!\nYou cannot execute this operation." });
+      return;
+    }
+
     const videoId = nanoid();
-    const key = `videos/${videoId}.${contentType}`;
+    const key = `uploads/${req.user.username}/videos/${videoId}.${contentType}`;
 
     const command = new CreateMultipartUploadCommand({
       Bucket: bucketName,
@@ -84,27 +104,13 @@ router.post("/start-upload", async (req, res) => {
 
     const { UploadId } = await s3Client.send(command);
 
-    res.status(200).send({
-      msg: "Multipart upload has successfully created!",
-      uploadId: UploadId,
-      key,
-    });
-  } catch (err) {
-    res.status(400).send({ err: "Unable to create multipart upload!" });
-  }
-});
-
-router.post("/get-upload-urls", async (req, res) => {
-  try {
-    const { key, uploadId, parts } = req.body;
-
     const urls = await Promise.all(
       Array.from({ length: parts }, async (_, i) => {
         const partNumber = i + 1;
         const command = new UploadPartCommand({
           Bucket: bucketName,
           Key: key,
-          UploadId: uploadId,
+          UploadId,
           PartNumber: partNumber,
         });
 
@@ -116,11 +122,14 @@ router.post("/get-upload-urls", async (req, res) => {
       })
     );
 
-    res.status(200).send({ urls });
+    res.status(200).send({
+      msg: "Multipart upload has successfully created!",
+      key,
+      uploadId: UploadId,
+      urls,
+    });
   } catch (err) {
-    res
-      .status(400)
-      .send({ err: "Unable to upload part or create presigned urls" });
+    res.status(400).send({ err: "Unable to create multipart upload!" });
   }
 });
 
@@ -142,6 +151,41 @@ router.post("/complete-upload", async (req, res) => {
   } catch (err) {
     res.status(400).send({
       err: `Error occured while trying to complete multipart upload with id ${uploadId}`,
+    });
+  }
+});
+
+router.post("/start-job", async (req, res) => {
+  const { key } = req.body;
+
+  if (!req.user) {
+    res.status(401).send({
+      err: "Unauthenticated!\nYou cannot execute this operation.",
+    });
+    return;
+  }
+
+  try {
+    const command = new CreateJobCommand({
+      Role: "Video_Encoder_Decoder",
+      JobTemplate: "Playtube Job Template",
+      Settings: {
+        Inputs: [
+          {
+            FileInput: `s3://${bucketName}/${key}`,
+          },
+        ],
+      },
+    });
+
+    await mediaConvertClient.send(command);
+
+    res.status(200).send({
+      msg: "The transcoding job has successfully finished!",
+    });
+  } catch (err) {
+    res.status(404).send({
+      err: "Error occurrd during transcoding your video file!",
     });
   }
 });
