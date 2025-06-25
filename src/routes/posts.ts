@@ -82,9 +82,43 @@ router.post("/upload-thumbnail", async (req, res) => {
   }
 });
 
-router.post("/start-upload", async (req, res) => {
+router.post("/simple-upload", async (req, res) => {
   try {
-    const { contentType, parts } = req.body;
+    const { contentType } = req.body;
+
+    if (!req.user) {
+      res
+        .status(401)
+        .send({ err: "Unauthenticated!\nYou cannot execute this operation." });
+      return;
+    }
+
+    const videoId = nanoid();
+    const key = `uploads/${req.user.username}/videos/${videoId}.${contentType}`;
+
+    const command = new PutObjectCommand({
+      Key: key,
+      Bucket: bucketName,
+    });
+
+    const url = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
+
+    res.status(200).send({
+      msg: "Success!",
+      url,
+    });
+  } catch (err) {
+    res.status(404).send({
+      err: "Error!",
+    });
+  }
+});
+
+router.post("/start-multipart-upload", async (req, res) => {
+  try {
+    const { contentType, fileSize } = req.body;
 
     if (!req.user) {
       res
@@ -102,10 +136,11 @@ router.post("/start-upload", async (req, res) => {
       ContentType: contentType,
     });
 
+    const partCount = Math.ceil(fileSize / 20_000_000);
     const { UploadId } = await s3Client.send(command);
 
     const urls = await Promise.all(
-      Array.from({ length: parts }, async (_, i) => {
+      Array.from({ length: partCount }, async (_, i) => {
         const partNumber = i + 1;
         const command = new UploadPartCommand({
           Bucket: bucketName,
@@ -133,7 +168,7 @@ router.post("/start-upload", async (req, res) => {
   }
 });
 
-router.post("/complete-upload", async (req, res) => {
+router.post("/complete-multipart-upload", async (req, res) => {
   const { uploadId, key } = req.body;
 
   try {
