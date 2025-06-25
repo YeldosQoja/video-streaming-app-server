@@ -169,13 +169,16 @@ router.post("/start-multipart-upload", async (req, res) => {
 });
 
 router.post("/complete-multipart-upload", async (req, res) => {
-  const { uploadId, key } = req.body;
+  const { uploadId, key, parts } = req.body;
 
   try {
     const command = new CompleteMultipartUploadCommand({
       UploadId: uploadId,
       Bucket: bucketName,
       Key: key,
+      MultipartUpload: {
+        Parts: parts, // The parts list each element of which contains ETag and part number of each part uploaded
+      },
     });
 
     await s3Client.send(command);
@@ -216,11 +219,11 @@ router.post("/start-job", async (req, res) => {
     await mediaConvertClient.send(command);
 
     res.status(200).send({
-      msg: "The transcoding job has successfully finished!",
+      msg: "The transcoding job has started!",
     });
   } catch (err) {
     res.status(404).send({
-      err: "Error occurrd during transcoding your video file!",
+      err: "Error occurred during transcoding your video file!",
     });
   }
 });
