@@ -15,6 +15,7 @@ import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
+import * as mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json";
 
 const mediaConvertClient = new MediaConvertClient();
 
@@ -74,6 +75,7 @@ router.post("/upload-thumbnail", async (req, res) => {
       msg: "Success!",
       url,
       key,
+      thumbnailId,
     });
   } catch (err) {
     res.status(400).send({
@@ -108,6 +110,8 @@ router.post("/simple-upload", async (req, res) => {
     res.status(200).send({
       msg: "Success!",
       url,
+      videoId,
+      key,
     });
   } catch (err) {
     res.status(404).send({
@@ -160,6 +164,7 @@ router.post("/start-multipart-upload", async (req, res) => {
     res.status(200).send({
       msg: "Multipart upload has successfully created!",
       key,
+      videoId,
       uploadId: UploadId,
       urls,
     });
@@ -194,7 +199,7 @@ router.post("/complete-multipart-upload", async (req, res) => {
 });
 
 router.post("/start-job", async (req, res) => {
-  const { key } = req.body;
+  const { key, ContentType } = req.body;
 
   if (!req.user) {
     res.status(401).send({
@@ -203,18 +208,12 @@ router.post("/start-job", async (req, res) => {
     return;
   }
 
+  const job = Object.create(mediaConvertJobDesc);
+  job.Settings.Inputs[0].FileInput = `s3://${bucketName}/uploads/${req.user.username}/videos/${key}.${ContentType}`;
+  job.Settings.OutputGroups[0].OutputGroupSettings.HlsGroupSettings.Destination = `s3://${bucketName}/outputs/${req.user.username}/${key}/output`;
+
   try {
-    const command = new CreateJobCommand({
-      Role: "Video_Encoder_Decoder",
-      JobTemplate: "Playtube Job Template",
-      Settings: {
-        Inputs: [
-          {
-            FileInput: `s3://${bucketName}/${key}`,
-          },
-        ],
-      },
-    });
+    const command = new CreateJobCommand(job);
 
     await mediaConvertClient.send(command);
 

@@ -1,0 +1,65 @@
+{
+  "JobTemplate": "arn:aws:mediaconvert:eu-central-1:533267405252:jobTemplates/Playtube Job Template",
+  "Queue": "arn:aws:mediaconvert:eu-central-1:533267405252:queues/Default",
+  "UserMetadata": {},
+  "Role": "arn:aws:iam::533267405252:role/Encoder_Decoder_Service_Role",
+  "Settings": {
+    "TimecodeConfig": {
+      "Source": "ZEROBASED"
+    },
+    "OutputGroups": [
+      {
+        "Name": "Apple HLS",
+        "Outputs": [
+          {
+            "Preset": "System-Avc_16x9_360p_29_97fps_600kbps",
+            "OutputSettings": {
+              "HlsSettings": {}
+            },
+            "NameModifier": "_HLS_360p"
+          },
+          {
+            "Preset": "System-Avc_16x9_720p_29_97fps_5000kbps",
+            "NameModifier": "_HLS_720p"
+          },
+          {
+            "Preset": "System-Avc_16x9_1080p_29_97fps_8500kbps",
+            "NameModifier": "_HLS_1080p"
+          },
+          {
+            "Preset": "System-Avc_4x3_480p_29_97fps_600kbps",
+            "NameModifier": "_HLS_480p"
+          }
+        ],
+        "OutputGroupSettings": {
+          "Type": "HLS_GROUP_SETTINGS",
+          "HlsGroupSettings": {
+            "SegmentLength": 10,
+            "Destination": "s3://playtube-bucket/outputs/",
+            "MinSegmentLength": 0
+          }
+        }
+      }
+    ],
+    "FollowSource": 1,
+    "Inputs": [
+      {
+        "AudioSelectors": {
+          "Audio Selector 1": {
+            "DefaultSelection": "DEFAULT"
+          }
+        },
+        "VideoSelector": {},
+        "TimecodeSource": "ZEROBASED",
+        "FileInput": "s3://playtube-bucket/uploads/"
+      }
+    ]
+  },
+  "BillingTagsSource": "JOB",
+  "AccelerationSettings": {
+    "Mode": "DISABLED"
+  },
+  "StatusUpdateInterval": "SECONDS_60",
+  "Priority": 100,
+  "HopDestinations": []
+}
