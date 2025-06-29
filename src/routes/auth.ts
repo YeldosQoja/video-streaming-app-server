@@ -50,15 +50,15 @@ passport.use(
 
 passport.serializeUser((user, cb) => {
   process.nextTick(() => {
-    cb(null, user.id);
+    cb(null, user.username);
   });
 });
 
-passport.deserializeUser((id: number, cb) => {
+passport.deserializeUser((username: string, cb) => {
   process.nextTick(() => {
     db.select()
       .from(users)
-      .where(eq(users.id, id))
+      .where(eq(users.username, username))
       .then((row) => {
         console.log(row);
         cb(null, row[0]);
@@ -69,7 +69,7 @@ passport.deserializeUser((id: number, cb) => {
   });
 });
 
-router.post("/login", (req, res, next) => {
+router.post("/signin", (req, res, next) => {
   passport.authenticate(
     "local",
     (err: any, user: Express.User, info: any, status: number) => {
@@ -79,7 +79,13 @@ router.post("/login", (req, res, next) => {
       if (!user) {
         return res.json({ err: info });
       }
-      res.status(200).json({ msg: "Login successful!" });
+      req.login(user, (err) => {
+        if (err) {
+          throw err;
+        }
+        console.log("session saved!");
+        res.status(200).json({ msg: "Login successful!" });
+      });
     }
   )(req, res, next);
 });
