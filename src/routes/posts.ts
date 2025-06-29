@@ -10,16 +10,112 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "../db";
 import { posts } from "../db/models/posts.sql";
 import { nanoid } from "nanoid";
-
 import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
 import * as mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json";
+import { eq } from "drizzle-orm";
+import { comments as commentsTable } from "../db/models/comments.sql";
+
+const router = express.Router();
 
 const mediaConvertClient = new MediaConvertClient();
 
-const router = express.Router();
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, desc } = req.body;
+
+    if (!req.user) {
+      res
+        .status(401)
+        .send({ err: "Unauthenticated users cannot update posts." });
+      return;
+    }
+
+    const post = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, parseInt(id)));
+
+    if (!post || post.length === 0) {
+      res.status(404).send({ err: "Post not found" });
+      return;
+    }
+
+    if (post[0]!.author !== req.user.id) {
+      res
+        .status(403)
+        .send({ err: "You are not authorized to update this post." });
+      return;
+    }
+
+    await db
+      .update(posts)
+      .set({ title, desc })
+      .where(eq(posts.id, parseInt(id)));
+
+    res.status(200).send({ msg: "Post updated successfully." });
+  } catch (err) {
+    res.status(500).send({ err: "Failed to update post." });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.user) {
+      res
+        .status(401)
+        .send({ err: "Unauthenticated users cannot delete posts." });
+      return;
+    }
+
+    const post = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, parseInt(id)));
+
+    if (!post || post.length === 0) {
+      res.status(404).send({ err: "Post not found" });
+      return;
+    }
+
+    if (post[0]!.author !== req.user.id) {
+      res
+        .status(403)
+        .send({ err: "You are not authorized to delete this post." });
+      return;
+    }
+
+    await db.delete(posts).where(eq(posts.id, parseInt(id)));
+
+    res.status(200).send({ msg: "Post deleted successfully." });
+  } catch (err) {
+    res.status(500).send({ err: "Failed to delete post." });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const post = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, parseInt(id)));
+
+    if (!post || post.length === 0) {
+      res.status(404).send({ err: "Post not found" });
+      return;
+    }
+
+    res.status(200).send({ post: post[0] });
+  } catch (err) {
+    res.status(500).send({ err: "Failed to fetch post" });
+  }
+});
 
 router.post("/create", async (req, res) => {
   try {
@@ -46,6 +142,44 @@ router.post("/create", async (req, res) => {
     res
       .status(400)
       .send({ err: "Something went wrong while creating the new post!" });
+  }
+});
+
+router.get("/:id/comments", async (req, res) => {
+  try {
+    if (!req.user) {
+      res.status(401).send({
+        err: "Unauthenticated!\nYou cannot execute this operation.",
+      });
+      return;
+    }
+
+    const { id } = req.params;
+    const offset = req.query["offset"] as string;
+    const limit = req.query["limit"] as string;
+
+    if (!limit) {
+      res.status(400).send({
+        err: "You must set limit query param. It is required!",
+      });
+      return;
+    }
+
+    const comments = await db
+      .select()
+      .from(commentsTable)
+      .where(eq(commentsTable.post, parseInt(id)))
+      .limit(parseInt(limit))
+      .offset(parseInt(offset || "0"));
+
+    res.status(200).send({
+      msg: "Comments retrieved!",
+      comments,
+    });
+  } catch (err) {
+    res.status(400).send({
+      err: "Error!",
+    });
   }
 });
 
