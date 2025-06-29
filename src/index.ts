@@ -6,7 +6,7 @@ import { pool } from "./db";
 import * as passport from "passport";
 import indexRouter from "./routes";
 import authRouter from "./routes/auth";
-import postsRouter from "./routes/posts";
+import videosRouter from "./routes/videos";
 import commentsRouter from "./routes/comments";
 
 export const app = express();
@@ -29,7 +29,7 @@ app.use(express.json());
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
-app.use("/posts", postsRouter);
+app.use("/videos", videosRouter);
 app.use("/comments", commentsRouter);
 
 dotenv.config();

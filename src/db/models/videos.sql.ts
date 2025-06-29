@@ -7,7 +7,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./users.sql";
 
-export const posts = pgTable("posts", {
+export const videos = pgTable("videos", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity().unique(),
   author: integer("author")
     .references(() => users.id, { onDelete: "cascade" })

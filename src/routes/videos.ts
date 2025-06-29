@@ -8,7 +8,7 @@ import {
 import { bucketName, s3Client } from "../services/AwsClient";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "../db";
-import { posts } from "../db/models/posts.sql";
+import { videos } from "../db/models/videos.sql";
 import { nanoid } from "nanoid";
 import {
   MediaConvertClient,
@@ -30,35 +30,35 @@ router.put("/:id", async (req, res) => {
     if (!req.user) {
       res
         .status(401)
-        .send({ err: "Unauthenticated users cannot update posts." });
+        .send({ err: "Unauthenticated users cannot update videos." });
       return;
     }
 
-    const post = await db
+    const video = await db
       .select()
-      .from(posts)
-      .where(eq(posts.id, parseInt(id)));
+      .from(videos)
+      .where(eq(videos.id, parseInt(id)));
 
-    if (!post || post.length === 0) {
-      res.status(404).send({ err: "Post not found" });
+    if (!video || video.length === 0) {
+      res.status(404).send({ err: "video not found" });
       return;
     }
 
-    if (post[0]!.author !== req.user.id) {
+    if (video[0]!.author !== req.user.id) {
       res
         .status(403)
-        .send({ err: "You are not authorized to update this post." });
+        .send({ err: "You are not authorized to update this video." });
       return;
     }
 
     await db
-      .update(posts)
+      .update(videos)
       .set({ title, desc })
-      .where(eq(posts.id, parseInt(id)));
+      .where(eq(videos.id, parseInt(id)));
 
-    res.status(200).send({ msg: "Post updated successfully." });
+    res.status(200).send({ msg: "video updated successfully." });
   } catch (err) {
-    res.status(500).send({ err: "Failed to update post." });
+    res.status(500).send({ err: "Failed to update video." });
   }
 });
 
@@ -69,51 +69,51 @@ router.delete("/:id", async (req, res) => {
     if (!req.user) {
       res
         .status(401)
-        .send({ err: "Unauthenticated users cannot delete posts." });
+        .send({ err: "Unauthenticated users cannot delete videos." });
       return;
     }
 
-    const post = await db
+    const video = await db
       .select()
-      .from(posts)
-      .where(eq(posts.id, parseInt(id)));
+      .from(videos)
+      .where(eq(videos.id, parseInt(id)));
 
-    if (!post || post.length === 0) {
-      res.status(404).send({ err: "Post not found" });
+    if (!video || video.length === 0) {
+      res.status(404).send({ err: "video not found" });
       return;
     }
 
-    if (post[0]!.author !== req.user.id) {
+    if (video[0]!.author !== req.user.id) {
       res
         .status(403)
-        .send({ err: "You are not authorized to delete this post." });
+        .send({ err: "You are not authorized to delete this video." });
       return;
     }
 
-    await db.delete(posts).where(eq(posts.id, parseInt(id)));
+    await db.delete(videos).where(eq(videos.id, parseInt(id)));
 
-    res.status(200).send({ msg: "Post deleted successfully." });
+    res.status(200).send({ msg: "video deleted successfully." });
   } catch (err) {
-    res.status(500).send({ err: "Failed to delete post." });
+    res.status(500).send({ err: "Failed to delete video." });
   }
 });
 
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const post = await db
+    const video = await db
       .select()
-      .from(posts)
-      .where(eq(posts.id, parseInt(id)));
+      .from(videos)
+      .where(eq(videos.id, parseInt(id)));
 
-    if (!post || post.length === 0) {
-      res.status(404).send({ err: "Post not found" });
+    if (!video || video.length === 0) {
+      res.status(404).send({ err: "video not found" });
       return;
     }
 
-    res.status(200).send({ post: post[0] });
+    res.status(200).send({ video: video[0] });
   } catch (err) {
-    res.status(500).send({ err: "Failed to fetch post" });
+    res.status(500).send({ err: "Failed to fetch video" });
   }
 });
 
@@ -123,12 +123,12 @@ router.post("/create", async (req, res) => {
 
     if (!req.user) {
       res.status(401).send({
-        err: "Unauthenticated users can not create a new post! In order to upload a video, sign in to your account or create a new one.",
+        err: "Unauthenticated users can not create a new video! In order to upload a video, sign in to your account or create a new one.",
       });
       return;
     }
 
-    await db.insert(posts).values({
+    await db.insert(videos).values({
       author: req.user.id,
       desc,
       publicKey: nanoid(),
@@ -137,11 +137,11 @@ router.post("/create", async (req, res) => {
       title,
     });
 
-    res.status(200).send({ err: "The post has created!" });
+    res.status(200).send({ err: "The video has created!" });
   } catch (err) {
     res
       .status(400)
-      .send({ err: "Something went wrong while creating the new post!" });
+      .send({ err: "Something went wrong while creating the new video!" });
   }
 });
 
@@ -168,7 +168,7 @@ router.get("/:id/comments", async (req, res) => {
     const comments = await db
       .select()
       .from(commentsTable)
-      .where(eq(commentsTable.post, parseInt(id)))
+      .where(eq(commentsTable.video, parseInt(id)))
       .limit(parseInt(limit))
       .offset(parseInt(offset || "0"));
 

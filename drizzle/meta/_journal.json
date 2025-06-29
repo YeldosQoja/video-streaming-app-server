@@ -71,6 +71,20 @@
       "when": 1751095499824,
       "tag": "0009_bitter_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1751187635953,
+      "tag": "0010_red_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1751189696320,
+      "tag": "0011_complex_roughhouse",
+      "breakpoints": true
     }
   ]
 }

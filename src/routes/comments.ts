@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   try {
-    const { postId, text, parentId } = req.body;
+    const { videoId, text, parentId } = req.body;
 
     if (!req.user) {
       res.status(401).send({
@@ -18,13 +18,13 @@ router.post("/", async (req, res) => {
 
     await db.insert(commentsTable).values({
       author: req.user.id,
-      post: postId,
+      video: videoId,
       content: text,
       parentComment: parentId,
     });
 
     res.send(201).send({
-      msg: "Comment has been added to the post.",
+      msg: "Comment has been added to the video.",
     });
   } catch (err) {
     res.status(400).send({

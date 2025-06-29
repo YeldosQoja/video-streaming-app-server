@@ -6,7 +6,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { users } from "./users.sql";
-import { posts } from "./posts.sql";
+import { videos } from "./videos.sql";
 
 export const comments = pgTable(
   "comments",
@@ -15,8 +15,8 @@ export const comments = pgTable(
     author: integer("author")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    post: integer("post")
-      .references(() => posts.id, { onDelete: "cascade" })
+    video: integer("video")
+      .references(() => videos.id, { onDelete: "cascade" })
       .notNull(),
     content: text("content").notNull(),
     parentComment: integer("parent_comment"),
