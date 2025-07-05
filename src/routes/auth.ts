@@ -1,5 +1,5 @@
-import * as express from "express";
-import * as passport from "passport";
+import express from "express";
+import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { db } from "../db/index.js";
 import { users } from "../db/models/users.sql.js";
