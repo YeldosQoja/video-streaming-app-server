@@ -1,6 +1,6 @@
 import { integer, pgTable, primaryKey, timestamp } from "drizzle-orm/pg-core";
-import { videos } from "./videos.sql";
-import { playlists } from "./playlists.sql";
+import { videos } from "./videos.sql.js";
+import { playlists } from "./playlists.sql.js";
 
 export const videosToPlaylists = pgTable(
   "videos_to_playlists",

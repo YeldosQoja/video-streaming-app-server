@@ -1,5 +1,5 @@
 import { integer, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import { users } from "./users.sql";
+import { users } from "./users.sql.js";
 
 export const playlists = pgTable("playlists", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey().unique(),

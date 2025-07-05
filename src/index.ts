@@ -1,13 +1,13 @@
-import * as express from "express";
-import * as dotenv from "dotenv";
-import * as session from "express-session";
-import * as connectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
-import * as passport from "passport";
-import indexRouter from "./routes";
-import authRouter from "./routes/auth";
-import videosRouter from "./routes/videos";
-import commentsRouter from "./routes/comments";
+import express from "express";
+import dotenv from "dotenv";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db/index.js";
+import passport from "passport";
+import indexRouter from "./routes/index.js";
+import authRouter from "./routes/auth.js";
+import videosRouter from "./routes/videos.js";
+import commentsRouter from "./routes/comments.js";
 
 export const app = express();
 

@@ -9,7 +9,7 @@
     // "disableReferencedProjectLoad": true,             /* Reduce the number of projects loaded automatically by TypeScript. */
 
     /* Language and Environment */
-    "target": "ES2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "target": "es2015",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     // "lib": [],                                        /* Specify a set of bundled library declaration files that describe the target runtime environment. */
     // "emitDecoratorMetadata": true,                    /* Emit design-type metadata for decorated declarations in source files. */
     // "noLib": true,                                    /* Disable including any library files, including the default lib.d.ts. */
@@ -17,12 +17,11 @@
     // "moduleDetection": "auto",                        /* Control what method is used to detect module-format JS files. */
 
     /* Modules */
-    "module": "CommonJS",                                /* Specify what module code is generated. */
+    "module": "nodenext",                                /* Specify what module code is generated. */
     // "rootDir": "src",                                  /* Specify the root folder within your source files. */
     "paths": {},                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
     "resolveJsonModule": true,                        /* Enable importing .json files. */
     "allowArbitraryExtensions": true,                 /* Enable importing files with any extension, provided a declaration file is present. */
-
     /* Emit */
     "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
     "outDir": "dist",                                   /* Specify an output folder for all emitted files. */

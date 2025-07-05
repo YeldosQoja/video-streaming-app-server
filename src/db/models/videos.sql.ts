@@ -5,7 +5,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-import { users } from "./users.sql";
+import { users } from "./users.sql.js";
 
 export const videos = pgTable("videos", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity().unique(),

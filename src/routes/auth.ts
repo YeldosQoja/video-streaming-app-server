@@ -1,8 +1,8 @@
 import * as express from "express";
 import * as passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { db } from "../db";
-import { users } from "../db/models/users.sql";
+import { db } from "../db/index.js";
+import { users } from "../db/models/users.sql.js";
 import { eq } from "drizzle-orm";
 import * as crypto from "node:crypto";
 

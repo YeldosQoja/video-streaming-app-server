@@ -4,11 +4,11 @@ import * as path from "node:path";
 
 const router = express.Router();
 
-router.get("/index", (req, res) => {
+router.get("home", (req, res) => {
   res.send("Hello World!");
 });
 
-router.get("/videos/:filename", (req, res) => {
+router.get("videos/local/:filename", (req, res) => {
   const filename = req.params.filename;
   const range = req.headers.range;
 

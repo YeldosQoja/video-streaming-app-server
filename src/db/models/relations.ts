@@ -1,9 +1,9 @@
 import { relations } from "drizzle-orm";
-import { users } from "./users.sql";
-import { videos } from "./videos.sql";
-import { videosToPlaylists } from "./videosToPlaylists.sql";
-import { playlists } from "./playlists.sql";
-import { comments } from "./comments.sql";
+import { users } from "./users.sql.js";
+import { videos } from "./videos.sql.js";
+import { videosToPlaylists } from "./videosToPlaylists.sql.js";
+import { playlists } from "./playlists.sql.js";
+import { comments } from "./comments.sql.js";
 
 export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),

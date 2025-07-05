@@ -1,5 +1,5 @@
 import { pgTable, integer, varchar, timestamp } from "drizzle-orm/pg-core";
-import { bytea } from "../byteaType";
+import { bytea } from "../byteaType.js";
 
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity().unique(),

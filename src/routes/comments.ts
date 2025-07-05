@@ -1,6 +1,6 @@
 import * as express from "express";
-import { db } from "../db";
-import { comments as commentsTable } from "../db/models/comments.sql";
+import { db } from "../db/index.js";
+import { comments as commentsTable } from "../db/models/comments.sql.js";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();

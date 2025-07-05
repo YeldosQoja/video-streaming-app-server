@@ -5,18 +5,18 @@ import {
   PutObjectCommand,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
-import { bucketName, s3Client } from "../services/AwsClient";
+import { bucketName, s3Client } from "../services/AwsClient.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { db } from "../db";
-import { videos } from "../db/models/videos.sql";
+import { db } from "../db/index.js";
+import { videos } from "../db/models/videos.sql.js";
 import { nanoid } from "nanoid";
 import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
-import * as mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json";
+import mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json" with { type: "json" };
 import { eq } from "drizzle-orm";
-import { comments as commentsTable } from "../db/models/comments.sql";
+import { comments as commentsTable } from "../db/models/comments.sql.js";
 
 const router = express.Router();
 

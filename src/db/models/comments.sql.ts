@@ -5,8 +5,8 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { users } from "./users.sql";
-import { videos } from "./videos.sql";
+import { users } from "./users.sql.js";
+import { videos } from "./videos.sql.js";
 
 export const comments = pgTable(
   "comments",

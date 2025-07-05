@@ -1,6 +1,6 @@
 import { Request } from "express";
 import { StorageEngine } from "multer";
-import { multipartUpload } from "./services/AwsClient";
+import { multipartUpload } from "./services/AwsClient.js";
 
 class S3Storage implements StorageEngine {
   async _handleFile(
