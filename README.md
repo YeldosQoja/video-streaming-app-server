@@ -1,0 +1,3 @@
+- [ ] Try out different ways to compile ts into js by playing around with module and moduleResolution compiler options
+- [ ] Set a unified node version accross different environments using nvm
+- [ ] Make codebase conform to [3-tier](https://github.com/goldbergyoni/nodebestpractices/blob/master/sections/projectstructre/createlayers.md) pattern.
