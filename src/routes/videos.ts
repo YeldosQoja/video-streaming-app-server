@@ -9,14 +9,25 @@ import { bucketName, s3Client } from "../services/AwsClient.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "../db/index.js";
 import { videos } from "../db/models/videos.sql.js";
-import { nanoid } from "nanoid";
 import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
-import mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json" with { type: "json" };
 import { eq } from "drizzle-orm";
 import { comments as commentsTable } from "../db/models/comments.sql.js";
+
+let nanoid: (n?: number) => string;
+let mediaConvertJobDesc: any;
+
+import ("../aws-mediaconvert-job-desc.json", { with: { type: "json" } }).then((module) => {
+  mediaConvertJobDesc = module.default;
+  console.log({ mediaConvertJobDesc });
+});
+import("nanoid").then((module) => {
+  nanoid = module.nanoid;
+  console.log("nanoid imported successfully");
+  console.log("nanoid()", nanoid());
+});
 
 const router = express.Router();
 
