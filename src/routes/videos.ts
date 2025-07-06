@@ -5,16 +5,16 @@ import {
   PutObjectCommand,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
-import { bucketName, s3Client } from "../services/AwsClient.js";
+import { bucketName, s3Client } from "../services/AwsClient";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { db } from "../db/index.js";
-import { videos } from "../db/models/videos.sql.js";
+import { db } from "../db";
+import { videos } from "../db/models/videos.sql";
 import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
 import { eq } from "drizzle-orm";
-import { comments as commentsTable } from "../db/models/comments.sql.js";
+import { comments as commentsTable } from "../db/models/comments.sql";
 
 let nanoid: (n?: number) => string;
 let mediaConvertJobDesc: any;
