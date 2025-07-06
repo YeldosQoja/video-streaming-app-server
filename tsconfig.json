@@ -25,6 +25,7 @@
     /* Emit */
     "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
     "outDir": "dist",                                   /* Specify an output folder for all emitted files. */
+    "rewriteRelativeImportExtensions": true,         /* Rewrite .ts, .tsx, .mts, and .cts file extensions in relative import paths to their JavaScript equivalent in output files. */
 
     /* Interop Constraints */
     "verbatimModuleSyntax": false,                     /* Do not transform or elide any imports or exports not marked as type-only, ensuring they are written in the output file's format based on the 'module' setting. */

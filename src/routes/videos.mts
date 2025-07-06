@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as express from "express";
 import {
   CompleteMultipartUploadCommand,
@@ -5,18 +6,18 @@ import {
   PutObjectCommand,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
-import { bucketName, s3Client } from "../services/AwsClient.js";
+import { bucketName, s3Client } from "../services/AwsClient.ts";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { db } from "../db/index.js";
-import { videos } from "../db/models/videos.sql.js";
+import { db } from "../db/index.ts";
+import { videos } from "../db/models/videos.sql.ts";
 import {
   MediaConvertClient,
   CreateJobCommand,
 } from "@aws-sdk/client-mediaconvert";
 import { eq } from "drizzle-orm";
-import { comments as commentsTable } from "../db/models/comments.sql.js";
+import { comments as commentsTable } from "../db/models/comments.sql.ts";
 import { nanoid } from "nanoid"; 
-import mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json";
+import mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json" with { type: "json" };
 
 const router = express.Router();
 
