@@ -6,7 +6,12 @@ import { pool } from "./db";
 import passport from "passport";
 import indexRouter from "./routes";
 import authRouter from "./routes/auth";
-import videosRouter from "./routes/videos";
+// Dynamically import the ESM videosRouter
+let videosRouter: any;
+(async () => {
+  const module = await import("./routes/videos.mjs");
+  videosRouter = module.default;
+})();
 import commentsRouter from "./routes/comments";
 
 export const app = express();
@@ -29,7 +34,13 @@ app.use(express.json());
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
-app.use("/videos", videosRouter);
+// Use videosRouter after it's loaded
+app.use("/videos", (req, res, next) => {
+  if (videosRouter) {
+    return videosRouter(req, res, next);
+  }
+  res.status(503).send("Videos router is not loaded yet.");
+});
 app.use("/comments", commentsRouter);
 
 dotenv.config();
