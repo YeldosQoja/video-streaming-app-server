@@ -1,4 +1,5 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -24,13 +25,25 @@ app.use(
   })
 );
 
-app.use(passport.authenticate("session"));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.json());
+
+const ensureAuthenticated = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ msg: "Unauthorized" });
+};
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
-app.use("/videos", videosRouter);
-app.use("/comments", commentsRouter);
+app.use("/videos", ensureAuthenticated, videosRouter);
+app.use("/comments", ensureAuthenticated, commentsRouter);
 
 dotenv.config();
 const port = process.env["PORT"];

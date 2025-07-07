@@ -1,14 +1,16 @@
-import * as express from "express";
-import * as fs from "node:fs";
-import * as path from "node:path";
+import express from "express";
+import fs from "node:fs";
+import path from "node:path";
 
 const router = express.Router();
 
-router.get("home", (req, res) => {
+router.get("/home", (req, res) => {
   res.send("Hello World!");
 });
 
-router.get("videos/local/:filename", (req, res) => {
+router.get("/videos/local/:filename", (req, res) => {
+  console.log(req.session, req.sessionID, req.user);
+
   const filename = req.params.filename;
   const range = req.headers.range;
 

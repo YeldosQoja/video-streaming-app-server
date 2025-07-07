@@ -4,7 +4,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { db } from "../db/index.js";
 import { users } from "../db/models/users.sql.js";
 import { eq } from "drizzle-orm";
-import * as crypto from "node:crypto";
+import crypto from "node:crypto";
 
 const router = express.Router();
 
@@ -49,18 +49,19 @@ passport.use(
 );
 
 passport.serializeUser((user, cb) => {
+  console.log("serializeUser", user);
   process.nextTick(() => {
     cb(null, user.username);
   });
 });
 
 passport.deserializeUser((username: string, cb) => {
+  console.log("deserializeUser", username);
   process.nextTick(() => {
     db.select()
       .from(users)
       .where(eq(users.username, username))
       .then((row) => {
-        console.log(row);
         cb(null, row[0]);
       })
       .catch((err) => {
@@ -83,7 +84,6 @@ router.post("/signin", (req, res, next) => {
         if (err) {
           throw err;
         }
-        console.log("session saved!");
         res.status(200).json({ msg: "Login successful!" });
       });
     }
@@ -115,7 +115,6 @@ router.post("/signup", async (req, res, next) => {
             salt,
           })
           .returning({ id: users.id, username: users.username });
-        console.log({ insertedUser });
         const user = insertedUser[0] as Express.User;
         req.login(user, (err) => {
           if (err) {

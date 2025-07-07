@@ -1,4 +1,4 @@
-import * as express from "express";
+import express from "express";
 import { db } from "../db/index.js";
 import { comments as commentsTable } from "../db/models/comments.sql.js";
 import { eq } from "drizzle-orm";
