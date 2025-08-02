@@ -10,6 +10,9 @@ export const s3Client = new S3Client();
 
 export const bucketName = process.env["AWS_S3_BUCKET_NAME"];
 
+export const cdnBaseUrl = process.env["S3_CDN"];
+export const trustedKeyGroupId = process.env["CDN_KEY_GROUP_ID"];
+
 export async function putObject(key: string, body: string) {
   try {
     const res = await s3Client.send(

@@ -3,3 +3,4 @@ dist/
 .env
 .vscode/
 assets/
+private_key.pem
