@@ -1,28 +1,20 @@
 import express from "express";
-import {
-  CompleteMultipartUploadCommand,
-  CreateMultipartUploadCommand,
-  PutObjectCommand,
-  UploadPartCommand,
-} from "@aws-sdk/client-s3";
-import { bucketName, s3Client, cdnBaseUrl, trustedKeyGroupId } from "../services/AwsClient.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { getSignedUrl as createSignedUrl } from "@aws-sdk/cloudfront-signer";
 import { db } from "../db/index.js";
 import { videos } from "../db/models/videos.sql.js";
 import { nanoid } from "nanoid";
-import {
-  MediaConvertClient,
-  CreateJobCommand,
-} from "@aws-sdk/client-mediaconvert";
-import mediaConvertJobDesc from "../aws-mediaconvert-job-desc.json" with { type: "json" };
 import { eq } from "drizzle-orm";
 import { comments as commentsTable } from "../db/models/comments.sql.js";
 import fs from "node:fs/promises";
+import { S3Service } from "../services/aws/S3Service.js";
+import { MediaConvertService } from "../services/aws/MediaConvertService.js";
+import { CloudFrontService } from "../services/aws/CloudFrontService.js";
 
 const router = express.Router();
 
-const mediaConvertClient = new MediaConvertClient();
+const s3Service = new S3Service();
+const mediaConvertService = new MediaConvertService();
+const cloudFrontService = new CloudFrontService();
 
 router.put("/:publicKey", async (req, res) => {
   try {
@@ -175,13 +167,8 @@ router.post("/upload-thumbnail", async (req, res) => {
     const thumbnailId = nanoid();
     const key = `uploads/${req.user!.username}/thumbnails/${thumbnailId}`;
 
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-      ContentType: contentType,
-    });
-
-    const url = await getSignedUrl(s3Client, command);
+    const command = await s3Service.createSimpleUpload(key, contentType);
+    const url = await getSignedUrl(s3Service.client, command);
 
     res.status(200).send({
       msg: "Success!",
@@ -202,13 +189,8 @@ router.post("/simple-upload", async (req, res) => {
     const videoId = nanoid();
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
 
-    const command = new PutObjectCommand({
-      Key: key,
-      Bucket: bucketName,
-      ContentType: contentType,
-    });
-
-    const url = await getSignedUrl(s3Client, command, {
+    const command = await s3Service.createSimpleUpload(key, contentType);
+    const url = await getSignedUrl(s3Service.client, command, {
       expiresIn: 3600,
     });
 
@@ -231,26 +213,20 @@ router.post("/start-multipart-upload", async (req, res) => {
     const videoId = nanoid();
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
 
-    const command = new CreateMultipartUploadCommand({
-      Bucket: bucketName,
-      Key: key,
-      ContentType: contentType,
-    });
-
     const partCount = Math.ceil(fileSize / 20_000_000);
-    const { UploadId } = await s3Client.send(command);
+    const result = await s3Service.createAndExecuteMultipartUpload(key, contentType);
+    const UploadId = result.UploadId;
+
+    if (!UploadId) {
+      res.status(400).send({ err: "Failed to create multipart upload - no UploadId returned" });
+      return;
+    }
 
     const urls = await Promise.all(
       Array.from({ length: partCount }, async (_, i) => {
         const partNumber = i + 1;
-        const command = new UploadPartCommand({
-          Bucket: bucketName,
-          Key: key,
-          UploadId,
-          PartNumber: partNumber,
-        });
-
-        const url = await getSignedUrl(s3Client, command, {
+        const partCommand = await s3Service.createPartUpload(key, UploadId, partNumber);
+        const url = await getSignedUrl(s3Service.client, partCommand, {
           expiresIn: 3600,
         });
 
@@ -275,16 +251,7 @@ router.post("/complete-multipart-upload", async (req, res) => {
   try {
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
     
-    const command = new CompleteMultipartUploadCommand({
-      UploadId: uploadId,
-      Bucket: bucketName,
-      Key: key,
-      MultipartUpload: {
-        Parts: parts, // The parts list each element of which contains ETag and part number of each part uploaded
-      },
-    });
-
-    await s3Client.send(command);
+    await s3Service.completeMultipartUpload(key, uploadId, parts);
 
     res
       .status(200)
@@ -297,18 +264,13 @@ router.post("/complete-multipart-upload", async (req, res) => {
 });
 
 router.post("/start-job", async (req, res) => {
-  const { videoId, contentType } = req.body
+  const { videoId, contentType } = req.body;
 
-  const key = `uploads/${req.user!.username}/videos/${videoId}.${contentType}`;
-  const job = Object.create(mediaConvertJobDesc);
+  const input = `s3://${s3Service.getBucketName()}/uploads/${req.user!.username}/videos/${videoId}.${contentType}`;
+  const destination = `s3://${s3Service.getBucketName()}/outputs/${req.user!.username}/${videoId}/output`;
   
-  job.Settings.Inputs[0].FileInput = `s3://${bucketName}/${key}`;
-  job.Settings.OutputGroups[0].OutputGroupSettings.HlsGroupSettings.Destination = `s3://${bucketName}/outputs/${req.user!.username}/${videoId}/output`;
-
   try {
-    const command = new CreateJobCommand(job);
-
-    await mediaConvertClient.send(command);
+    await mediaConvertService.startTranscodingJob(input, destination);
 
     res.status(200).send({
       msg: "The transcoding job has started!",
@@ -332,16 +294,14 @@ router.get("/:publicKey/url", async (req, res, next) => {
       return;
     }
 
-    const privateKey = await fs.readFile('@/../private_key.pem');
-
     const { storageKey } = video[0]!;
+    const expirationDate = Date.now() + 3600; // Video will be available for the next hour
 
-    const url = createSignedUrl({
-      url: `${cdnBaseUrl}/outputs/${req.user!.username}/${storageKey}/output.m3u8`,
-      keyPairId: trustedKeyGroupId as string,
-      privateKey,
-      dateLessThan: Date.now() + 3600, // Video will be available for the next hour
-    });
+    const url = await cloudFrontService.generateSignedUrl(
+      req.user!.username,
+      storageKey,
+      expirationDate
+    );
 
     res.status(201).send({
       url,
