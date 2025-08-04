@@ -5,6 +5,7 @@ import { db } from "../db/index.js";
 import { users } from "../db/models/users.sql.js";
 import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
+import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 
 const router = express.Router();
 
@@ -84,7 +85,7 @@ router.post("/signin", (req, res, next) => {
         if (err) {
           throw err;
         }
-        res.status(200).json({ msg: "Login successful!" });
+        res.status(HttpStatusCode.OK).json({ msg: "Login successful!" });
       });
     }
   )(req, res, next);
@@ -121,7 +122,7 @@ router.post("/signup", async (req, res, next) => {
             throw err;
           }
           console.log("session saved!");
-          res.status(200).json({ user, msg: "User created!" });
+          res.status(HttpStatusCode.OK).json({ user, msg: "User created!" });
         });
       } catch (err) {
         next(err);

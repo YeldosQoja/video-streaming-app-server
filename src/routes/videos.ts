@@ -5,10 +5,11 @@ import { videos } from "../db/models/videos.sql.js";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { comments as commentsTable } from "../db/models/comments.sql.js";
-import fs from "node:fs/promises";
 import { S3Service } from "../services/aws/S3Service.js";
 import { MediaConvertService } from "../services/aws/MediaConvertService.js";
 import { CloudFrontService } from "../services/aws/CloudFrontService.js";
+import AppError from "../utils/AppError.js";
+import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 
 const router = express.Router();
 
@@ -27,13 +28,13 @@ router.put("/:publicKey", async (req, res) => {
       .where(eq(videos.publicKey, publicKey));
 
     if (!video || video.length === 0) {
-      res.status(404).send({ err: "video not found" });
+      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
       return;
     }
 
     if (video[0]!.author !== req.user!.id) {
       res
-        .status(403)
+        .status(HttpStatusCode.FORBIDDEN)
         .send({ err: "You are not authorized to update this video." });
       return;
     }
@@ -43,9 +44,9 @@ router.put("/:publicKey", async (req, res) => {
       .set({ title, desc })
       .where(eq(videos.publicKey, publicKey));
 
-    res.status(200).send({ msg: "video updated successfully." });
+    res.status(HttpStatusCode.OK).send({ msg: "video updated successfully." });
   } catch (err) {
-    res.status(500).send({ err: "Failed to update video." });
+    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to update video." });
   }
 });
 
@@ -59,22 +60,22 @@ router.delete("/:publicKey", async (req, res) => {
       .where(eq(videos.publicKey, publicKey));
 
     if (!video || video.length === 0) {
-      res.status(404).send({ err: "video not found" });
+      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
       return;
     }
 
     if (video[0]!.author !== req.user!.id) {
       res
-        .status(403)
+        .status(HttpStatusCode.FORBIDDEN)
         .send({ err: "You are not authorized to delete this video." });
       return;
     }
 
     await db.delete(videos).where(eq(videos.publicKey, publicKey));
 
-    res.status(200).send({ msg: "video deleted successfully." });
+    res.status(HttpStatusCode.OK).send({ msg: "video deleted successfully." });
   } catch (err) {
-    res.status(500).send({ err: "Failed to delete video." });
+    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to delete video." });
   }
 });
 
@@ -87,13 +88,13 @@ router.get("/:publicKey", async (req, res) => {
       .where(eq(videos.publicKey, publicKey));
 
     if (!video || video.length === 0) {
-      res.status(404).send({ err: "video not found" });
+      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
       return;
     }
 
-    res.status(200).send({ video: video[0] });
+    res.status(HttpStatusCode.OK).send({ video: video[0] });
   } catch (err) {
-    res.status(500).send({ err: "Failed to fetch video" });
+    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to fetch video" });
   }
 });
 
@@ -110,10 +111,10 @@ router.post("/create", async (req, res) => {
       title,
     });
 
-    res.status(200).send({ err: "The video has created!" });
+    res.status(HttpStatusCode.OK).send({ err: "The video has created!" });
   } catch (err) {
     res
-      .status(400)
+      .status(HttpStatusCode.BAD_REQUEST)
       .send({ err: "Something went wrong while creating the new video!" });
   }
 });
@@ -125,7 +126,7 @@ router.get("/:publicKey/comments", async (req, res) => {
     const limit = req.query["limit"] as string;
 
     if (!limit) {
-      res.status(400).send({
+      res.status(HttpStatusCode.BAD_REQUEST).send({
         err: "You must set limit query param. It is required!",
       });
       return;
@@ -138,7 +139,7 @@ router.get("/:publicKey/comments", async (req, res) => {
       .where(eq(videos.publicKey, publicKey));
 
     if (!video || video.length === 0) {
-      res.status(404).send({ err: "video not found" });
+      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
       return;
     }
 
@@ -149,12 +150,12 @@ router.get("/:publicKey/comments", async (req, res) => {
       .limit(parseInt(limit))
       .offset(parseInt(offset || "0"));
 
-    res.status(200).send({
+    res.status(HttpStatusCode.OK).send({
       msg: "Comments retrieved!",
       comments,
     });
   } catch (err) {
-    res.status(400).send({
+    res.status(HttpStatusCode.BAD_REQUEST).send({
       err: "Error!",
     });
   }
@@ -170,13 +171,13 @@ router.post("/upload-thumbnail", async (req, res) => {
     const command = await s3Service.createSimpleUpload(key, contentType);
     const url = await getSignedUrl(s3Service.client, command);
 
-    res.status(200).send({
+    res.status(HttpStatusCode.OK).send({
       msg: "Success!",
       url,
       thumbnailId,
     });
   } catch (err) {
-    res.status(400).send({
+    res.status(HttpStatusCode.BAD_REQUEST).send({
       msg: "Error!",
     });
   }
@@ -194,13 +195,13 @@ router.post("/simple-upload", async (req, res) => {
       expiresIn: 3600,
     });
 
-    res.status(200).send({
+    res.status(HttpStatusCode.OK).send({
       msg: "Success!",
       url,
       videoId,
     });
   } catch (err) {
-    res.status(404).send({
+    res.status(HttpStatusCode.NOT_FOUND).send({
       err: "Error!",
     });
   }
@@ -218,7 +219,7 @@ router.post("/start-multipart-upload", async (req, res) => {
     const UploadId = result.UploadId;
 
     if (!UploadId) {
-      res.status(400).send({ err: "Failed to create multipart upload - no UploadId returned" });
+      res.status(HttpStatusCode.BAD_REQUEST).send({ err: "Failed to create multipart upload - no UploadId returned" });
       return;
     }
 
@@ -234,14 +235,14 @@ router.post("/start-multipart-upload", async (req, res) => {
       })
     );
 
-    res.status(200).send({
+    res.status(HttpStatusCode.OK).send({
       msg: "Multipart upload has successfully created!",
       videoId,
       uploadId: UploadId,
       urls,
     });
   } catch (err) {
-    res.status(400).send({ err: "Unable to create multipart upload!" });
+    res.status(HttpStatusCode.BAD_REQUEST).send({ err: "Unable to create multipart upload!" });
   }
 });
 
@@ -254,10 +255,10 @@ router.post("/complete-multipart-upload", async (req, res) => {
     await s3Service.completeMultipartUpload(key, uploadId, parts);
 
     res
-      .status(200)
+      .status(HttpStatusCode.OK)
       .send({ msg: `Multipart upload with id ${uploadId} has completed!` });
   } catch (err) {
-    res.status(400).send({
+    res.status(HttpStatusCode.BAD_REQUEST).send({
       err: `Error occured while trying to complete multipart upload with id ${uploadId}`,
     });
   }
@@ -272,11 +273,11 @@ router.post("/start-job", async (req, res) => {
   try {
     await mediaConvertService.startTranscodingJob(input, destination);
 
-    res.status(200).send({
+    res.status(HttpStatusCode.OK).send({
       msg: "The transcoding job has started!",
     });
   } catch (err) {
-    res.status(404).send({
+    res.status(HttpStatusCode.NOT_FOUND).send({
       err: "Error occurred during transcoding your video file!",
     });
   }
@@ -288,7 +289,7 @@ router.get("/:publicKey/url", async (req, res, next) => {
     const video = await db.select().from(videos).where(eq(videos.publicKey, publicKey));
 
     if (video.length === 0) {
-      res.status(404).send({
+      res.status(HttpStatusCode.NOT_FOUND).send({
         err: `Video not found with key ${publicKey}`,
       });
       return;
@@ -303,12 +304,12 @@ router.get("/:publicKey/url", async (req, res, next) => {
       expirationDate
     );
 
-    res.status(201).send({
+    res.status(HttpStatusCode.CREATED).send({
       url,
       msg: "Signed URL has successfully generated!",
     });
   } catch (err) {
-    res.status(400).send({
+    res.status(HttpStatusCode.BAD_REQUEST).send({
       err: "Something was off while signing the resource url."
     });
   }

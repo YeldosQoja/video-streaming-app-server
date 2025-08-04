@@ -7,5 +7,6 @@ export const enum HttpStatusCode {
     FORBIDDEN = 403,
     NOT_FOUND = 404,
     METHOD_NOT_ALLOWED = 405,
+    RANGE_NOT_SATISFIABLE = 416,
     SERVER_ERROR = 500,
 }

@@ -1,6 +1,7 @@
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
+import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 
 const router = express.Router();
 
@@ -26,14 +27,14 @@ router.get("/videos/local/:filename", (req, res) => {
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
       if (start >= fileSize || end >= fileSize) {
-        res.status(416).send("Requested range not satisfiable");
+        res.status(HttpStatusCode.RANGE_NOT_SATISFIABLE).send("Requested range not satisfiable");
         return;
       }
 
       const chunkSize = end - start + 1;
       const stream = fs.createReadStream(videoPath, { start, end });
 
-      res.writeHead(206, {
+      res.writeHead(HttpStatusCode.PARTIAL_CONTENT, {
         "Content-Range": `bytes ${start} - ${end}/${fileSize}`,
         "Accept-Ranges": "bytes",
         "Content-Length": chunkSize,
@@ -42,7 +43,7 @@ router.get("/videos/local/:filename", (req, res) => {
 
       stream.pipe(res);
     } else {
-      res.writeHead(200, {
+      res.writeHead(HttpStatusCode.OK, {
         "Content-Length": fileSize,
         "Content-Type": "video/mp4",
       });

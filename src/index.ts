@@ -11,6 +11,8 @@ import videosRouter from "./routes/videos.js";
 import commentsRouter from "./routes/comments.js";
 
 export const app = express();
+dotenv.config();
+const port = process.env["PORT"];
 
 app.use(
   session({
@@ -44,9 +46,6 @@ app.use("/", indexRouter);
 app.use("/auth", authRouter);
 app.use("/videos", ensureAuthenticated, videosRouter);
 app.use("/comments", ensureAuthenticated, commentsRouter);
-
-dotenv.config();
-const port = process.env["PORT"];
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
