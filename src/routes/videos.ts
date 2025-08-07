@@ -1,5 +1,4 @@
 import express from "express";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "../db/index.js";
 import { videos } from "../db/models/videos.sql.js";
 import { nanoid } from "nanoid";
@@ -168,8 +167,8 @@ router.post("/upload-thumbnail", async (req, res) => {
     const thumbnailId = nanoid();
     const key = `uploads/${req.user!.username}/thumbnails/${thumbnailId}`;
 
-    const command = await s3Service.createSimpleUpload(key, contentType);
-    const url = await getSignedUrl(s3Service.client, command);
+    const command = s3Service.createSimpleUpload(key, contentType);
+    const url = await s3Service.getSignedUrl(command);
 
     res.status(HttpStatusCode.OK).send({
       msg: "Success!",
@@ -191,9 +190,7 @@ router.post("/simple-upload", async (req, res) => {
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
 
     const command = await s3Service.createSimpleUpload(key, contentType);
-    const url = await getSignedUrl(s3Service.client, command, {
-      expiresIn: 3600,
-    });
+    const url = await s3Service.getSignedUrl(command);
 
     res.status(HttpStatusCode.OK).send({
       msg: "Success!",
@@ -215,8 +212,9 @@ router.post("/start-multipart-upload", async (req, res) => {
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
 
     const partCount = Math.ceil(fileSize / 20_000_000);
-    const result = await s3Service.createAndExecuteMultipartUpload(key, contentType);
-    const UploadId = result.UploadId;
+    const command = s3Service.createMultipartUpload(key, contentType);
+
+    const { UploadId } = await s3Service.sendCommand(command);
 
     if (!UploadId) {
       res.status(HttpStatusCode.BAD_REQUEST).send({ err: "Failed to create multipart upload - no UploadId returned" });
@@ -226,10 +224,8 @@ router.post("/start-multipart-upload", async (req, res) => {
     const urls = await Promise.all(
       Array.from({ length: partCount }, async (_, i) => {
         const partNumber = i + 1;
-        const partCommand = await s3Service.createPartUpload(key, UploadId, partNumber);
-        const url = await getSignedUrl(s3Service.client, partCommand, {
-          expiresIn: 3600,
-        });
+        const partCommand = s3Service.createPartUpload(key, UploadId, partNumber);
+        const url = await s3Service.getSignedUrl(partCommand);
 
         return { partNumber, url };
       })
@@ -267,8 +263,8 @@ router.post("/complete-multipart-upload", async (req, res) => {
 router.post("/start-job", async (req, res) => {
   const { videoId, contentType } = req.body;
 
-  const input = `s3://${s3Service.getBucketName()}/uploads/${req.user!.username}/videos/${videoId}.${contentType}`;
-  const destination = `s3://${s3Service.getBucketName()}/outputs/${req.user!.username}/${videoId}/output`;
+  const input = `uploads/${req.user!.username}/videos/${videoId}.${contentType}`;
+  const destination = `outputs/${req.user!.username}/${videoId}/output`;
   
   try {
     await mediaConvertService.startTranscodingJob(input, destination);
