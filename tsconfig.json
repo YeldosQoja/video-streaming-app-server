@@ -23,7 +23,7 @@
     "resolveJsonModule": true,                        /* Enable importing .json files. */
     "allowArbitraryExtensions": true,                 /* Enable importing files with any extension, provided a declaration file is present. */
     /* Emit */
-    "sourceMap": true,                                /* Create source map files for emitted JavaScript files. */
+    "sourceMap": false,                                /* Create source map files for emitted JavaScript files. */
     "outDir": "dist",                                   /* Specify an output folder for all emitted files. */
 
     /* Interop Constraints */
@@ -47,5 +47,5 @@
     "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
     "types": ["node", "express"],
   },
-  "include": ["src/**/*", "*.ts"]
+  "include": ["src/**/*"]
 }
