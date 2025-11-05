@@ -1,7 +1,8 @@
 import { CreateJobCommand, MediaConvertClient, ServiceInputTypes, ServiceOutputTypes } from "@aws-sdk/client-mediaconvert";
-import mediaConvertJobTemplate from "../../../aws-mediaconvert-job-desc.json" with { type: "json" };
 import { AwsService } from "./AWSService.js";
 import { awsConfig } from "../../config/aws.js";
+import AppError from "../../utils/AppError.js";
+import { HttpStatusCode } from "../../utils/HttpStatusCode.js";
 
 export class MediaConvertService extends AwsService<MediaConvertClient, ServiceInputTypes, ServiceOutputTypes> {
   protected override client: MediaConvertClient;
@@ -15,7 +16,13 @@ export class MediaConvertService extends AwsService<MediaConvertClient, ServiceI
     input: string,
     destination: string,
   ) {
-    const job = Object.create(mediaConvertJobTemplate);
+    const jobTemplateJson = process.env["MEDIACONVERT_JOB_CONFIG"];
+
+    if (jobTemplateJson === undefined) {
+      throw new AppError("Couldn't access transcoding job configs!", HttpStatusCode.SERVER_ERROR, true);
+    }
+
+    const job = Object.create(JSON.parse(jobTemplateJson));
   
     job.Settings.Inputs[0].FileInput = "s3://" + awsConfig.s3.bucketName + "/" + input;
     job.Settings.OutputGroups[0].OutputGroupSettings.HlsGroupSettings.Destination = "s3://" + awsConfig.s3.bucketName + "/" + destination;

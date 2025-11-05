@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "fs";
 import type { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import session from "express-session";
@@ -9,6 +10,9 @@ import indexRouter from "./routes/index.js";
 import authRouter from "./routes/auth.js";
 import videosRouter from "./routes/videos.js";
 import commentsRouter from "./routes/comments.js";
+
+// For cloud front private key
+fs.writeFileSync('/tmp/private_key.pem', process.env["CDN_PRIVATE_KEY"] || "");
 
 export const app = express();
 dotenv.config();

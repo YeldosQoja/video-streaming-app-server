@@ -9,7 +9,7 @@ export class CloudFrontService {
     expirationDate: number | string | Date,
   ) {
     const { baseUrl, keyGroupId } = awsConfig.cloudFront;
-    const privateKey = await fs.readFile('../../../private_key.pem');
+    const privateKey = await fs.readFile('../../tmp/private_key.pem');
 
     const url = getSignedUrl({
         url: `${baseUrl}/outputs/${username}/${storageKey}/output.m3u8`,
