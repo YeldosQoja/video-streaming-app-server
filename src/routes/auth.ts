@@ -6,6 +6,7 @@ import { users } from "../db/models/users.sql.js";
 import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
+import { ensureAuthenticated } from "../index.js";
 
 const router = express.Router();
 
@@ -127,6 +128,32 @@ router.post("/signup", async (req, res, next) => {
       }
     }
   );
+});
+
+router.get("/me", ensureAuthenticated, async (req, res) => {
+  try {
+    const results = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, req.user!.id));
+    const user = results[0];
+
+    if (!user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    res.status(HttpStatusCode.OK).json({
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      createdAt: user.createdAt,
+    });
+  } catch (err) {
+    console.error("Error fetching user:", err);
+    res.status(HttpStatusCode.SERVER_ERROR).json({ error: "Server error" });
+  }
 });
 
 export default router;

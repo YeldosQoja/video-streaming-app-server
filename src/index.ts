@@ -29,6 +29,10 @@ app.use(
     }),
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60, // 1 day
+    }
   })
 );
 
@@ -40,7 +44,7 @@ app.use(cors({
   credentials: true,
 }));
 
-const ensureAuthenticated = (
+export const ensureAuthenticated = (
   req: Request,
   res: Response,
   next: NextFunction
