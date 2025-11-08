@@ -6,7 +6,6 @@ import { users } from "../db/models/users.sql.js";
 import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
-import { ensureAuthenticated } from "../index.js";
 
 const router = express.Router();
 
@@ -130,7 +129,7 @@ router.post("/signup", async (req, res, next) => {
   );
 });
 
-router.get("/me", ensureAuthenticated, async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     const results = await db
       .select()

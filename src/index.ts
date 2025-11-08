@@ -57,6 +57,7 @@ export const ensureAuthenticated = (
 
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
+authRouter.use("/me", ensureAuthenticated);
 app.use("/videos", ensureAuthenticated, videosRouter);
 app.use("/comments", ensureAuthenticated, commentsRouter);
 
