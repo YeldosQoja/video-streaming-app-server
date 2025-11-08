@@ -10,8 +10,6 @@ router.get("/home", (req, res) => {
 });
 
 router.get("/videos/local/:filename", (req, res) => {
-  console.log(req.session, req.sessionID, req.user);
-
   const filename = req.params.filename;
   const range = req.headers.range;
 

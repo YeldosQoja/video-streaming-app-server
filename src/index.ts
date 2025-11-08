@@ -6,13 +6,14 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db/index.js";
 import passport from "passport";
+import cors from "cors";
 import indexRouter from "./routes/index.js";
 import authRouter from "./routes/auth.js";
 import videosRouter from "./routes/videos.js";
 import commentsRouter from "./routes/comments.js";
 
 // For cloud front private key
-fs.writeFileSync('/tmp/private_key.pem', process.env["CDN_PRIVATE_KEY"] || "");
+fs.writeFileSync("/tmp/private_key.pem", process.env["CDN_PRIVATE_KEY"] || "");
 
 export const app = express();
 dotenv.config();
@@ -34,6 +35,10 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
+app.use(cors({
+  origin: "*",
+  credentials: true,
+}));
 
 const ensureAuthenticated = (
   req: Request,

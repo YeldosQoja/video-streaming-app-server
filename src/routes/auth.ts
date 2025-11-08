@@ -50,14 +50,12 @@ passport.use(
 );
 
 passport.serializeUser((user, cb) => {
-  console.log("serializeUser", user);
   process.nextTick(() => {
     cb(null, user.username);
   });
 });
 
 passport.deserializeUser((username: string, cb) => {
-  console.log("deserializeUser", username);
   process.nextTick(() => {
     db.select()
       .from(users)
