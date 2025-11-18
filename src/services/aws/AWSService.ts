@@ -7,7 +7,7 @@ export abstract class AwsService<
   ClientInput extends object,
   ClientOutput extends MetadataBearer
 > {
-  protected readonly client!: TClient;
+  readonly client!: TClient;
 
   async sendCommand<
     InputType extends ClientInput,

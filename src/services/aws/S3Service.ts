@@ -1,4 +1,5 @@
 import {
+  AbortMultipartUploadCommand,
   CompletedPart,
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
@@ -20,7 +21,7 @@ export class S3Service extends AwsService<
   ServiceInputTypes,
   ServiceOutputTypes
 > {
-  protected override client: S3Client;
+  override client: S3Client;
   bucketName = awsConfig.s3.bucketName;
 
   constructor(config?: S3ClientConfig) {
@@ -71,6 +72,16 @@ export class S3Service extends AwsService<
       MultipartUpload: {
         Parts: parts,
       },
+    });
+
+    return command;
+  }
+
+  abortMultipartUpload(key: string, uploadId: string) {
+    const command = new AbortMultipartUploadCommand({
+      Bucket: this.bucketName,
+      Key: key,
+      UploadId: uploadId,
     });
 
     return command;

@@ -1,6 +1,5 @@
 import express from "express";
 import fs from "fs";
-import type { Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -11,6 +10,7 @@ import indexRouter from "./routes/index.js";
 import authRouter from "./routes/auth.js";
 import videosRouter from "./routes/videos.js";
 import commentsRouter from "./routes/comments.js";
+import { ensureAuthenticated } from "./middlewares.js";
 
 // For cloud front private key
 fs.writeFileSync("/tmp/private_key.pem", process.env["CDN_PRIVATE_KEY"] || "");
@@ -31,33 +31,21 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      maxAge: 24 * 60 * 60, // 1 day
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     }
   })
 );
-
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.json());
+
 app.use(cors({
-  origin: "*",
+  origin: "http://localhost:5173",
   credentials: true,
 }));
 
-export const ensureAuthenticated = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ msg: "Unauthorized" });
-};
-
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
-authRouter.use("/me", ensureAuthenticated);
 app.use("/videos", ensureAuthenticated, videosRouter);
 app.use("/comments", ensureAuthenticated, commentsRouter);
 

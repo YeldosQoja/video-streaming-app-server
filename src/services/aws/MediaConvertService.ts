@@ -5,7 +5,7 @@ import AppError from "../../utils/AppError.js";
 import { HttpStatusCode } from "../../utils/HttpStatusCode.js";
 
 export class MediaConvertService extends AwsService<MediaConvertClient, ServiceInputTypes, ServiceOutputTypes> {
-  protected override client: MediaConvertClient;
+  override client: MediaConvertClient;
 
   constructor() {
     super();

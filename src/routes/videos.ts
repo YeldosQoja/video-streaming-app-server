@@ -45,7 +45,9 @@ router.put("/:publicKey", async (req, res) => {
 
     res.status(HttpStatusCode.OK).send({ msg: "video updated successfully." });
   } catch (err) {
-    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to update video." });
+    res
+      .status(HttpStatusCode.SERVER_ERROR)
+      .send({ err: "Failed to update video." });
   }
 });
 
@@ -74,7 +76,9 @@ router.delete("/:publicKey", async (req, res) => {
 
     res.status(HttpStatusCode.OK).send({ msg: "video deleted successfully." });
   } catch (err) {
-    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to delete video." });
+    res
+      .status(HttpStatusCode.SERVER_ERROR)
+      .send({ err: "Failed to delete video." });
   }
 });
 
@@ -93,7 +97,9 @@ router.get("/:publicKey", async (req, res) => {
 
     res.status(HttpStatusCode.OK).send({ video: video[0] });
   } catch (err) {
-    res.status(HttpStatusCode.SERVER_ERROR).send({ err: "Failed to fetch video" });
+    res
+      .status(HttpStatusCode.SERVER_ERROR)
+      .send({ err: "Failed to fetch video" });
   }
 });
 
@@ -217,14 +223,22 @@ router.post("/start-multipart-upload", async (req, res) => {
     const { UploadId } = await s3Service.sendCommand(command);
 
     if (!UploadId) {
-      res.status(HttpStatusCode.BAD_REQUEST).send({ err: "Failed to create multipart upload - no UploadId returned" });
+      res
+        .status(HttpStatusCode.BAD_REQUEST)
+        .send({
+          err: "Failed to create multipart upload - no UploadId returned",
+        });
       return;
     }
 
     const urls = await Promise.all(
       Array.from({ length: partCount }, async (_, i) => {
         const partNumber = i + 1;
-        const partCommand = s3Service.createPartUpload(key, UploadId, partNumber);
+        const partCommand = s3Service.createPartUpload(
+          key,
+          UploadId,
+          partNumber,
+        );
         const url = await s3Service.getSignedUrl(partCommand);
 
         return { partNumber, url };
@@ -238,7 +252,10 @@ router.post("/start-multipart-upload", async (req, res) => {
       urls,
     });
   } catch (err) {
-    res.status(HttpStatusCode.BAD_REQUEST).send({ err: "Unable to create multipart upload!" });
+    console.log(err);
+    res
+      .status(HttpStatusCode.BAD_REQUEST)
+      .send({ err: "Unable to create multipart upload!" });
   }
 });
 
@@ -247,8 +264,10 @@ router.post("/complete-multipart-upload", async (req, res) => {
 
   try {
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
-    
-    await s3Service.completeMultipartUpload(key, uploadId, parts);
+
+    const command = s3Service.completeMultipartUpload(key, uploadId, parts);
+
+    await s3Service.client.send(command);
 
     res
       .status(HttpStatusCode.OK)
@@ -260,12 +279,43 @@ router.post("/complete-multipart-upload", async (req, res) => {
   }
 });
 
+router.post("/abort-multipart-upload", async (req, res) => {
+  try {
+    const { uploadId, videoId } = req.body;
+
+    if (!uploadId || !videoId) {
+      res.status(HttpStatusCode.BAD_REQUEST).send({
+        err: "uploadId and videoId are required",
+      });
+      return;
+    }
+
+    const key = `uploads/${req.user!.username}/videos/${videoId}`;
+    const command = s3Service.abortMultipartUpload(key, uploadId);
+
+    const response = await s3Service.client.send(command);
+
+    console.log({ response });
+
+    res.status(HttpStatusCode.OK).send({
+      msg: `Multipart upload with id ${uploadId} has been cancelled successfully!`,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(HttpStatusCode.BAD_REQUEST).send({
+      err: `Error occurred while trying to cancel multipart upload`,
+    });
+  }
+});
+
 router.post("/start-job", async (req, res) => {
   const { videoId, contentType } = req.body;
 
-  const input = `uploads/${req.user!.username}/videos/${videoId}.${contentType}`;
+  const input = `uploads/${
+    req.user!.username
+  }/videos/${videoId}.${contentType}`;
   const destination = `outputs/${req.user!.username}/${videoId}/output`;
-  
+
   try {
     await mediaConvertService.startTranscodingJob(input, destination);
 
@@ -282,7 +332,10 @@ router.post("/start-job", async (req, res) => {
 router.get("/:publicKey/url", async (req, res, next) => {
   try {
     const { publicKey } = req.params;
-    const video = await db.select().from(videos).where(eq(videos.publicKey, publicKey));
+    const video = await db
+      .select()
+      .from(videos)
+      .where(eq(videos.publicKey, publicKey));
 
     if (video.length === 0) {
       res.status(HttpStatusCode.NOT_FOUND).send({
@@ -306,9 +359,9 @@ router.get("/:publicKey/url", async (req, res, next) => {
     });
   } catch (err) {
     res.status(HttpStatusCode.BAD_REQUEST).send({
-      err: "Something was off while signing the resource url."
+      err: "Something was off while signing the resource url.",
     });
   }
-})
+});
 
 export default router;
