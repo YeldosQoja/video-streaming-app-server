@@ -5,7 +5,6 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { comments as commentsTable } from "../db/models/comments.sql.js";
 import { S3Service } from "../services/aws/S3Service.js";
-import { MediaConvertService } from "../services/aws/MediaConvertService.js";
 import { CloudFrontService } from "../services/aws/CloudFrontService.js";
 import AppError from "../utils/AppError.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
@@ -13,7 +12,6 @@ import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 const router = express.Router();
 
 const s3Service = new S3Service();
-const mediaConvertService = new MediaConvertService();
 const cloudFrontService = new CloudFrontService();
 
 router.put("/:publicKey", async (req, res) => {
@@ -295,36 +293,14 @@ router.post("/abort-multipart-upload", async (req, res) => {
 
     const response = await s3Service.client.send(command);
 
-    console.log({ response });
-
     res.status(HttpStatusCode.OK).send({
       msg: `Multipart upload with id ${uploadId} has been cancelled successfully!`,
+      data: response,
     });
   } catch (err) {
     console.log(err);
     res.status(HttpStatusCode.BAD_REQUEST).send({
       err: `Error occurred while trying to cancel multipart upload`,
-    });
-  }
-});
-
-router.post("/start-job", async (req, res) => {
-  const { videoId, contentType } = req.body;
-
-  const input = `uploads/${
-    req.user!.username
-  }/videos/${videoId}.${contentType}`;
-  const destination = `outputs/${req.user!.username}/${videoId}/output`;
-
-  try {
-    await mediaConvertService.startTranscodingJob(input, destination);
-
-    res.status(HttpStatusCode.OK).send({
-      msg: "The transcoding job has started!",
-    });
-  } catch (err) {
-    res.status(HttpStatusCode.NOT_FOUND).send({
-      err: "Error occurred during transcoding your video file!",
     });
   }
 });

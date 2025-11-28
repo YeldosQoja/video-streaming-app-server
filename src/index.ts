@@ -12,11 +12,10 @@ import videosRouter from "./routes/videos.js";
 import commentsRouter from "./routes/comments.js";
 import { ensureAuthenticated } from "./middlewares.js";
 
-// For cloud front private key
-fs.writeFileSync("/tmp/private_key.pem", process.env["CDN_PRIVATE_KEY"] || "");
-
 export const app = express();
 dotenv.config();
+// For cloud front private key
+fs.writeFileSync("/tmp/private_key.pem", process.env["CDN_PRIVATE_KEY"] || "");
 const port = process.env["PORT"];
 
 app.use(
