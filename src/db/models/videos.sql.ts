@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   text,
@@ -6,6 +7,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./users.sql.js";
+import { categories } from "./categories.sql.js";
 
 export const videos = pgTable("videos", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity().unique(),
@@ -21,8 +23,19 @@ export const videos = pgTable("videos", {
     .notNull(),
   title: varchar("title", { length: 60 }).notNull(),
   desc: text("desc"),
+  category: integer("category").references(() => categories.id, {
+    onDelete: "set null",
+  }),
+  isForKids: boolean("is_for_kids").default(false),
+  isAgeRestricted: boolean("is_age_restricted").default(false),
+  allowComments: boolean("allow_comments").default(true),
+  allowDownloads: boolean("allow_downloads").default(false),
   createdAt: timestamp("created_at", {
     mode: "string",
     withTimezone: true,
-  }),
+  }).notNull(),
+  lastUpdatedAt: timestamp("last_updated_at", {
+    mode: "string",
+    withTimezone: true,
+  }).notNull(),
 });

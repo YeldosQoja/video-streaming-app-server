@@ -14,7 +14,7 @@ export const videosToPlaylists = pgTable(
     addedAt: timestamp("added_at", {
       mode: "string",
       withTimezone: true,
-    }),
+    }).notNull(),
   },
   (table) => ({
     cpk: primaryKey({

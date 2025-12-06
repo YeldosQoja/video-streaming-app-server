@@ -4,6 +4,8 @@ import { videos } from "./videos.sql.js";
 import { videosToPlaylists } from "./videosToPlaylists.sql.js";
 import { playlists } from "./playlists.sql.js";
 import { comments } from "./comments.sql.js";
+import { videosToTags } from "./videosToTags.sql.js";
+import { tags } from "./tags.sql.js";
 
 export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),
@@ -12,10 +14,15 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const videosRelations = relations(videos, ({ many }) => ({
   comments: many(comments),
   videosToPlaylists: many(videosToPlaylists),
+  videosToTags: many(videosToTags),
 }));
 
 export const playlistsRelations = relations(playlists, ({ many }) => ({
   videosToPlaylists: many(videosToPlaylists),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  videosToTags: many(videosToTags),
 }));
 
 export const videosToPlaylistsRelations = relations(
@@ -31,3 +38,14 @@ export const videosToPlaylistsRelations = relations(
     }),
   })
 );
+
+export const videosToTagsRelations = relations(videosToTags, ({ one }) => ({
+  video: one(videos, {
+    fields: [videosToTags.video],
+    references: [videos.id],
+  }),
+  tag: one(tags, {
+    fields: [videosToTags.tag],
+    references: [tags.id],
+  }),
+}));
