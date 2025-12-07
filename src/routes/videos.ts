@@ -8,6 +8,8 @@ import { S3Service } from "../services/aws/S3Service.js";
 import { CloudFrontService } from "../services/aws/CloudFrontService.js";
 import AppError from "../utils/AppError.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
+import { videosToPlaylists } from "../db/models/videosToPlaylists.sql.js";
+import { tags as tagsTable } from "../db/models/tags.sql.js";
 
 const router = express.Router();
 
@@ -38,7 +40,7 @@ router.put("/:publicKey", async (req, res) => {
 
     await db
       .update(videos)
-      .set({ title, desc })
+      .set({ title, desc, lastUpdatedAt: new Date().toISOString() })
       .where(eq(videos.publicKey, publicKey));
 
     res.status(HttpStatusCode.OK).send({ msg: "video updated successfully." });
@@ -103,18 +105,68 @@ router.get("/:publicKey", async (req, res) => {
 
 router.post("/create", async (req, res) => {
   try {
-    const { title, desc, videoId, thumbnailId } = req.body;
-
-    await db.insert(videos).values({
-      author: req.user!.id,
-      desc,
-      publicKey: nanoid(),
-      storageKey: videoId,
-      thumbnailStorageKey: thumbnailId,
+    const {
       title,
-    });
+      desc,
+      videoId,
+      thumbnailId,
+      playlist,
+      category,
+      isForKids,
+      isAgeRestricted,
+      allowComments,
+      allowDownloads,
+      tags,
+    } = req.body;
 
-    res.status(HttpStatusCode.OK).send({ err: "The video has created!" });
+    const video = await db
+      .insert(videos)
+      .values({
+        author: req.user!.id,
+        desc,
+        publicKey: nanoid(),
+        storageKey: videoId,
+        thumbnailStorageKey: thumbnailId,
+        title,
+        category,
+        isForKids,
+        isAgeRestricted,
+        allowComments,
+        allowDownloads,
+        createdAt: new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+      })
+      .returning();
+
+    if (playlist) {
+      await db.insert(videosToPlaylists).values({
+        // @ts-ignore
+        video: video.id,
+        playlist,
+        addedAt: new Date().toISOString(),
+      });
+    }
+
+    if (typeof tags === "string") {
+      const tagList = tags.split(",");
+      tagList.forEach((tag) => {
+        db.select()
+          .from(tagsTable)
+          .where(eq(tagsTable.name, tag))
+          .then((res) => {
+            if (res.length === 0) {
+              db.insert(tagsTable).values({
+                name: tag,
+              });
+            } else {
+              const tagRow = res[0]!;
+              db.update(tagsTable).set({ count: tagRow.count + 1 });
+            }
+          });
+      });
+    }
+
+    res.status(HttpStatusCode.OK).send({ msg: "The video has created!" });
   } catch (err) {
     res
       .status(HttpStatusCode.BAD_REQUEST)
@@ -221,11 +273,9 @@ router.post("/start-multipart-upload", async (req, res) => {
     const { UploadId } = await s3Service.sendCommand(command);
 
     if (!UploadId) {
-      res
-        .status(HttpStatusCode.BAD_REQUEST)
-        .send({
-          err: "Failed to create multipart upload - no UploadId returned",
-        });
+      res.status(HttpStatusCode.BAD_REQUEST).send({
+        err: "Failed to create multipart upload - no UploadId returned",
+      });
       return;
     }
 
@@ -235,7 +285,7 @@ router.post("/start-multipart-upload", async (req, res) => {
         const partCommand = s3Service.createPartUpload(
           key,
           UploadId,
-          partNumber,
+          partNumber
         );
         const url = await s3Service.getSignedUrl(partCommand);
 
