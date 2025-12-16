@@ -1,5 +1,5 @@
 import type { DrizzleError } from "drizzle-orm";
-import { count, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./index.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 import AppError from "../utils/AppError.js";
@@ -14,6 +14,30 @@ export async function findVideoByPublicKey(publicKey: string) {
   try {
     const video = await db.query.videos.findFirst({
       where: (fields, operators) => operators.eq(fields.publicKey, publicKey),
+      with: {
+        author: {
+          columns: {
+            id: false,
+            password: false,
+            salt: false,
+            createdAt: false,
+            email: false,
+          },
+        },
+        category: true,
+        tags: {
+          columns: {
+            video: false,
+          },
+          with: {
+            tag: {
+              columns: {
+                count: false,
+              },
+            },
+          },
+        },
+      },
     });
     if (!video) {
       throw new AppError(
@@ -28,7 +52,9 @@ export async function findVideoByPublicKey(publicKey: string) {
       throw err;
     }
     throw new AppError(
-      `DB Error: finding video by public key ${publicKey} failed.`,
+      `DB Error: finding video by public key ${publicKey} failed. Error message: ${
+        (err as DrizzleError).message
+      }`,
       HttpStatusCode.SERVER_ERROR,
       false
     );
@@ -50,7 +76,7 @@ export async function updateVideo(
   }
 }
 
-export async function deleteVideoByPublicKey(publicKey: string) {
+export async function deleteVideo(publicKey: string) {
   try {
     await db.delete(videos).where(eq(videos.publicKey, publicKey));
   } catch (err) {

@@ -6,15 +6,24 @@ import { playlists } from "./playlists.sql.js";
 import { comments } from "./comments.sql.js";
 import { videosToTags } from "./videosToTags.sql.js";
 import { tags } from "./tags.sql.js";
+import { categories } from "./categories.sql.js";
 
 export const usersRelations = relations(users, ({ many }) => ({
   videos: many(videos),
 }));
 
-export const videosRelations = relations(videos, ({ many }) => ({
+export const videosRelations = relations(videos, ({ many, one }) => ({
+  author: one(users, {
+    fields: [videos.author],
+    references: [users.id],
+  }),
+  category: one(categories, {
+    fields: [videos.category],
+    references: [categories.id],
+  }),
   comments: many(comments),
   videosToPlaylists: many(videosToPlaylists),
-  videosToTags: many(videosToTags),
+  tags: many(videosToTags),
 }));
 
 export const playlistsRelations = relations(playlists, ({ many }) => ({
