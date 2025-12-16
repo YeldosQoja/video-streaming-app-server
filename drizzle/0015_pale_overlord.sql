@@ -1,0 +1,1 @@
+ALTER TABLE "tags" ADD COLUMN "count" integer DEFAULT 1 NOT NULL;
