@@ -1,15 +1,16 @@
 import express from "express";
-import { db } from "../db/index.js";
-import { videos } from "../db/models/videos.sql.js";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
-import { comments as commentsTable } from "../db/models/comments.sql.js";
 import { S3Service } from "../services/aws/S3Service.js";
 import { CloudFrontService } from "../services/aws/CloudFrontService.js";
 import AppError from "../utils/AppError.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
-import { videosToPlaylists } from "../db/models/videosToPlaylists.sql.js";
-import { tags as tagsTable } from "../db/models/tags.sql.js";
+import {
+  findVideoByPublicKey,
+  updateVideo,
+  deleteVideoByPublicKey,
+  getCommentsByVideoId,
+  createVideoTx,
+} from "../db/queries.js";
 
 const router = express.Router();
 
@@ -17,203 +18,112 @@ const s3Service = new S3Service();
 const cloudFrontService = new CloudFrontService();
 
 router.put("/:publicKey", async (req, res) => {
-  try {
-    const { publicKey } = req.params;
-    const { title, desc } = req.body;
+  const { publicKey } = req.params;
+  const { title, desc } = req.body;
 
-    const video = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.publicKey, publicKey));
+  const video = await findVideoByPublicKey(publicKey);
 
-    if (!video || video.length === 0) {
-      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
-      return;
-    }
-
-    if (video[0]!.author !== req.user!.id) {
-      res
-        .status(HttpStatusCode.FORBIDDEN)
-        .send({ err: "You are not authorized to update this video." });
-      return;
-    }
-
-    await db
-      .update(videos)
-      .set({ title, desc, lastUpdatedAt: new Date().toISOString() })
-      .where(eq(videos.publicKey, publicKey));
-
-    res.status(HttpStatusCode.OK).send({ msg: "video updated successfully." });
-  } catch (err) {
-    res
-      .status(HttpStatusCode.SERVER_ERROR)
-      .send({ err: "Failed to update video." });
+  if (video.author !== req.user!.id) {
+    throw new AppError(
+      "You are not authorized to update this video.",
+      HttpStatusCode.FORBIDDEN,
+      true
+    );
   }
+
+  await updateVideo(publicKey, {
+    title,
+    desc,
+    lastUpdatedAt: new Date().toISOString(),
+  });
+
+  res.status(HttpStatusCode.OK).send({ msg: "video updated successfully." });
 });
 
 router.delete("/:publicKey", async (req, res) => {
-  try {
-    const { publicKey } = req.params;
+  const { publicKey } = req.params;
 
-    const video = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.publicKey, publicKey));
+  const video = await findVideoByPublicKey(publicKey);
 
-    if (!video || video.length === 0) {
-      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
-      return;
-    }
-
-    if (video[0]!.author !== req.user!.id) {
-      res
-        .status(HttpStatusCode.FORBIDDEN)
-        .send({ err: "You are not authorized to delete this video." });
-      return;
-    }
-
-    await db.delete(videos).where(eq(videos.publicKey, publicKey));
-
-    res.status(HttpStatusCode.OK).send({ msg: "video deleted successfully." });
-  } catch (err) {
+  if (video.author !== req.user!.id) {
     res
-      .status(HttpStatusCode.SERVER_ERROR)
-      .send({ err: "Failed to delete video." });
+      .status(HttpStatusCode.FORBIDDEN)
+      .send({ err: "You are not authorized to delete this video." });
+    return;
   }
+
+  await deleteVideoByPublicKey(publicKey);
+
+  res.status(HttpStatusCode.OK).send({ msg: "video deleted successfully." });
 });
 
 router.get("/:publicKey", async (req, res) => {
-  try {
-    const { publicKey } = req.params;
-    const video = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.publicKey, publicKey));
-
-    if (!video || video.length === 0) {
-      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
-      return;
-    }
-
-    res.status(HttpStatusCode.OK).send({ video: video[0] });
-  } catch (err) {
-    res
-      .status(HttpStatusCode.SERVER_ERROR)
-      .send({ err: "Failed to fetch video" });
-  }
+  const { publicKey } = req.params;
+  const video = await findVideoByPublicKey(publicKey);
+  res.status(HttpStatusCode.OK).send({ video });
 });
 
 router.post("/create", async (req, res) => {
-  try {
-    const {
-      title,
+  const {
+    title,
+    desc,
+    videoId,
+    thumbnailId,
+    playlist,
+    category,
+    isForKids,
+    isAgeRestricted,
+    allowComments,
+    allowDownloads,
+    tags,
+  } = req.body;
+
+  await createVideoTx(
+    {
+      author: req.user!.id,
       desc,
-      videoId,
-      thumbnailId,
-      playlist,
+      publicKey: nanoid(),
+      storageKey: videoId,
+      thumbnailStorageKey: thumbnailId,
+      title,
       category,
       isForKids,
       isAgeRestricted,
       allowComments,
       allowDownloads,
-      tags,
-    } = req.body;
+      createdAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+    },
+    playlist,
+    tags.split(",")
+  );
 
-    const video = await db
-      .insert(videos)
-      .values({
-        author: req.user!.id,
-        desc,
-        publicKey: nanoid(),
-        storageKey: videoId,
-        thumbnailStorageKey: thumbnailId,
-        title,
-        category,
-        isForKids,
-        isAgeRestricted,
-        allowComments,
-        allowDownloads,
-        createdAt: new Date().toISOString(),
-        lastUpdatedAt: new Date().toISOString(),
-      })
-      .returning();
-
-    if (playlist) {
-      await db.insert(videosToPlaylists).values({
-        // @ts-ignore
-        video: video.id,
-        playlist,
-        addedAt: new Date().toISOString(),
-      });
-    }
-
-    if (typeof tags === "string") {
-      const tagList = tags.split(",");
-      tagList.forEach((tag) => {
-        db.select()
-          .from(tagsTable)
-          .where(eq(tagsTable.name, tag))
-          .then((res) => {
-            if (res.length === 0) {
-              db.insert(tagsTable).values({
-                name: tag,
-              });
-            } else {
-              const tagRow = res[0]!;
-              db.update(tagsTable).set({ count: tagRow.count + 1 });
-            }
-          });
-      });
-    }
-
-    res.status(HttpStatusCode.OK).send({ msg: "The video has created!" });
-  } catch (err) {
-    res
-      .status(HttpStatusCode.BAD_REQUEST)
-      .send({ err: "Something went wrong while creating the new video!" });
-  }
+  res.status(HttpStatusCode.OK).send({ msg: "The video has been created!" });
 });
 
 router.get("/:publicKey/comments", async (req, res) => {
-  try {
-    const { publicKey } = req.params;
-    const offset = req.query["offset"] as string;
-    const limit = req.query["limit"] as string;
+  const { publicKey } = req.params;
+  const offset = req.query["offset"] as string;
+  const limit = req.query["limit"] as string;
 
-    if (!limit) {
-      res.status(HttpStatusCode.BAD_REQUEST).send({
-        err: "You must set limit query param. It is required!",
-      });
-      return;
-    }
-
-    // First get the video to find its id
-    const video = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.publicKey, publicKey));
-
-    if (!video || video.length === 0) {
-      res.status(HttpStatusCode.NOT_FOUND).send({ err: "video not found" });
-      return;
-    }
-
-    const comments = await db
-      .select()
-      .from(commentsTable)
-      .where(eq(commentsTable.video, video[0]!.id))
-      .limit(parseInt(limit))
-      .offset(parseInt(offset || "0"));
-
-    res.status(HttpStatusCode.OK).send({
-      msg: "Comments retrieved!",
-      comments,
-    });
-  } catch (err) {
+  if (!limit) {
     res.status(HttpStatusCode.BAD_REQUEST).send({
-      err: "Error!",
+      err: "You must set limit query param. It is required.",
     });
+    return;
   }
+
+  const video = await findVideoByPublicKey(publicKey);
+  const comments = await getCommentsByVideoId(
+    video.id,
+    parseInt(limit),
+    parseInt(offset || "0")
+  );
+
+  res.status(HttpStatusCode.OK).send({
+    msg: "Comments retrieved!",
+    comments,
+  });
 });
 
 router.post("/upload-thumbnail", async (req, res) => {
@@ -358,19 +268,9 @@ router.post("/abort-multipart-upload", async (req, res) => {
 router.get("/:publicKey/url", async (req, res, next) => {
   try {
     const { publicKey } = req.params;
-    const video = await db
-      .select()
-      .from(videos)
-      .where(eq(videos.publicKey, publicKey));
+    const video = await findVideoByPublicKey(publicKey);
 
-    if (video.length === 0) {
-      res.status(HttpStatusCode.NOT_FOUND).send({
-        err: `Video not found with key ${publicKey}`,
-      });
-      return;
-    }
-
-    const { storageKey } = video[0]!;
+    const { storageKey } = video;
     const expirationDate = Date.now() + 3600; // Video will be available for the next hour
 
     const url = await cloudFrontService.generateSignedUrl(
@@ -384,6 +284,10 @@ router.get("/:publicKey/url", async (req, res, next) => {
       msg: "Signed URL has successfully generated!",
     });
   } catch (err) {
+    if (err instanceof AppError && err.isOperational) {
+      res.status(err.statusCode).send({ err: err.message });
+      return;
+    }
     res.status(HttpStatusCode.BAD_REQUEST).send({
       err: "Something was off while signing the resource url.",
     });

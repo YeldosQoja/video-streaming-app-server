@@ -20,5 +20,5 @@ export const handleError = async (
   res: Response,
   next: NextFunction
 ) => {
-  await errorHandler.handle(err);
+  await errorHandler.handle(err, res);
 };

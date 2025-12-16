@@ -1,12 +1,14 @@
 import express from "express";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { db } from "../db/index.js";
-import { users } from "../db/models/users.sql.js";
-import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 import { ensureAuthenticated } from "../middlewares.js";
+import {
+  findUserByUsername,
+  findUserById,
+  createUser,
+} from "../db/queries.js";
 
 const router = express.Router();
 
@@ -15,11 +17,7 @@ const ITERATIONS = 310000;
 passport.use(
   new LocalStrategy(async (username, password, cb) => {
     try {
-      const userRow = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      const user = userRow[0];
+      const user = await findUserByUsername(username);
       if (!user) {
         return cb(null, false, {
           message: "There is no such user with username " + username,
@@ -57,16 +55,13 @@ passport.serializeUser((user, cb) => {
 });
 
 passport.deserializeUser((username: string, cb) => {
-  process.nextTick(() => {
-    db.select()
-      .from(users)
-      .where(eq(users.username, username))
-      .then((row) => {
-        cb(null, row[0]);
-      })
-      .catch((err) => {
-        cb(err, null);
-      });
+  process.nextTick(async () => {
+    try {
+      const user = await findUserByUsername(username);
+      cb(null, user);
+    } catch (err) {
+      cb(err, null);
+    }
   });
 });
 
@@ -104,19 +99,15 @@ router.post("/signup", async (req, res, next) => {
         return next(err);
       }
       try {
-        const insertedUser = await db
-          .insert(users)
-          .values({
-            firstName,
-            lastName,
-            email,
-            password: hashedPassword,
-            username,
-            salt,
-          })
-          .returning({ id: users.id, username: users.username });
-        const user = insertedUser[0] as Express.User;
-        req.login(user, (err) => {
+        const user = await createUser({
+          firstName,
+          lastName,
+          email,
+          password: hashedPassword,
+          username,
+          salt,
+        });
+        req.login(user as Express.User, (err) => {
           if (err) {
             throw err;
           }
@@ -132,11 +123,7 @@ router.post("/signup", async (req, res, next) => {
 
 router.get("/me", ensureAuthenticated, async (req, res) => {
   try {
-    const results = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, req.user!.id));
-    const user = results[0];
+    const user = await findUserById(req.user!.id);
 
     if (!user) {
       res.status(HttpStatusCode.UNAUTHORIZED).json({ error: "Unauthorized" });
