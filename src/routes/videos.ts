@@ -109,7 +109,7 @@ router.post("/simple-upload", async (req, res) => {
     const videoId = nanoid();
     const key = `uploads/${req.user!.username}/videos/${videoId}`;
 
-    const command = await s3Service.createSimpleUpload(key, contentType);
+    const command = s3Service.createSimpleUpload(key, contentType);
     const url = await s3Service.getSignedUrl(command);
 
     res.status(HttpStatusCode.OK).send({

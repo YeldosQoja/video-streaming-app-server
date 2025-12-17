@@ -7,6 +7,7 @@ import {
   S3Client,
   S3ClientConfig,
   S3ClientResolvedConfig,
+  S3ServiceException,
   ServiceInputTypes,
   ServiceOutputTypes,
   UploadPartCommand,
@@ -15,6 +16,8 @@ import { awsConfig } from "../../config/aws.js";
 import { AwsService } from "./AWSService.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Command, RequestPresigningArguments } from "@aws-sdk/types";
+import AppError from "../../utils/AppError.js";
+import { HttpStatusCode } from "../../utils/HttpStatusCode.js";
 
 export class S3Service extends AwsService<
   S3Client,
@@ -30,34 +33,64 @@ export class S3Service extends AwsService<
   }
 
   createSimpleUpload(key: string, contentType: string) {
-    const command = new PutObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      ContentType: contentType,
-    });
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+      });
 
-    return command;
+      return command;
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: Create PubObjectCommand failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 
   createMultipartUpload(key: string, contentType: string) {
-    const command = new CreateMultipartUploadCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      ContentType: contentType,
-    });
+    try {
+      const command = new CreateMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: contentType,
+      });
 
-    return command;
+      return command;
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: Create CreateMultipartUploadCommand failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 
   createPartUpload(key: string, uploadId: string, partNumber: number) {
-    const command = new UploadPartCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      UploadId: uploadId,
-      PartNumber: partNumber,
-    });
+    try {
+      const command = new UploadPartCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+      });
 
-    return command;
+      return command;
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: Create UploadPartCommand failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 
   completeMultipartUpload(
@@ -65,26 +98,46 @@ export class S3Service extends AwsService<
     uploadId: string,
     parts: CompletedPart[]
   ) {
-    const command = new CompleteMultipartUploadCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      UploadId: uploadId,
-      MultipartUpload: {
-        Parts: parts,
-      },
-    });
+    try {
+      const command = new CompleteMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts,
+        },
+      });
 
-    return command;
+      return command;
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: Create CompleteMultipartUploadCommand failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 
   abortMultipartUpload(key: string, uploadId: string) {
-    const command = new AbortMultipartUploadCommand({
-      Bucket: this.bucketName,
-      Key: key,
-      UploadId: uploadId,
-    });
+    try {
+      const command = new AbortMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+      });
 
-    return command;
+      return command;
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: Create CompleteMultipartUploadCommand failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 
   async getSignedUrl<
@@ -100,7 +153,17 @@ export class S3Service extends AwsService<
     >,
     options?: RequestPresigningArguments
   ) {
-    // @ts-ignore
-    return await getSignedUrl(this.client, command, options);
+    try {
+      // @ts-ignore
+      return await getSignedUrl(this.client, command, options);
+    } catch (err) {
+      throw new AppError(
+        `AWS Error: generating signed url for s3 service commands failed. ${
+          (err as S3ServiceException).message
+        }`,
+        HttpStatusCode.SERVER_ERROR,
+        false
+      );
+    }
   }
 }
