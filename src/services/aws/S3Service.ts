@@ -12,7 +12,7 @@ import {
   ServiceOutputTypes,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
-import { awsConfig } from "../../config/aws.js";
+import { getAwsConfig } from "../../config/aws.js";
 import { AwsService } from "./AWSService.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Command, RequestPresigningArguments } from "@aws-sdk/types";
@@ -25,11 +25,13 @@ export class S3Service extends AwsService<
   ServiceOutputTypes
 > {
   override client: S3Client;
-  bucketName = awsConfig.s3.bucketName;
+  bucketName: string;
 
   constructor(config?: S3ClientConfig) {
     super();
     this.client = new S3Client(config ?? {});
+    const awsConfig = getAwsConfig();
+    this.bucketName = awsConfig.s3.bucketName;
   }
 
   createSimpleUpload(key: string, contentType: string) {

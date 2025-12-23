@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import { getSignedUrl } from "@aws-sdk/cloudfront-signer";
-import { awsConfig } from "../../config/aws.js";
+import { getAwsConfig } from "../../config/aws.js";
 
 export class CloudFrontService {
   async generateSignedUrl(
@@ -8,7 +8,9 @@ export class CloudFrontService {
     storageKey: string,
     expirationDate: number | string | Date
   ) {
-    const { baseUrl, keyGroupId } = awsConfig.cloudFront;
+    const {
+      cloudFront: { baseUrl, keyGroupId },
+    } = getAwsConfig();
     const privateKey = await fs.readFile("../../tmp/private_key.pem");
 
     const url = getSignedUrl({

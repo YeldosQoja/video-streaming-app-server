@@ -1,14 +1,10 @@
 import express from "express";
 import { nanoid } from "nanoid";
 import { S3Service } from "../services/aws/S3Service.js";
-import { CloudFrontService } from "../services/aws/CloudFrontService.js";
-import AppError from "../utils/AppError.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 
 const router = express.Router();
-
 const s3Service = new S3Service();
-const cloudFrontService = new CloudFrontService();
 
 router.post("/", async (req, res) => {
   const { contentType } = req.body;
