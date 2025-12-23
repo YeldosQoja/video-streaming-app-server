@@ -9,11 +9,17 @@ import {
   deleteVideo,
   getCommentsByVideoId,
   createVideoTx,
+  getUploadedVideos,
 } from "../db/queries.js";
 
 const router = express.Router();
 
 const cloudFrontService = new CloudFrontService();
+
+router.get("", async (req, res) => {
+  const videos = await getUploadedVideos();
+  res.status(HttpStatusCode.OK).send({ videos });
+});
 
 router.post("/create", async (req, res) => {
   const {
@@ -126,13 +132,27 @@ router.get("/:publicKey", async (req, res) => {
   const video = await findVideoByPublicKey(publicKey);
   const { storageKey, thumbnailStorageKey, tags, ...rest } = video;
 
-  const videoUrlPromise = cloudFrontService.generateSignedUrl(user.username, storageKey, Date.now() + 3600);
-  const thumbnailUrlPromise = cloudFrontService.generateSignedUrl(user.username, thumbnailStorageKey, Date.now() + 3600);
+  const videoUrlPromise = cloudFrontService.generateSignedUrl(
+    user.username,
+    storageKey,
+    Date.now() + 3600
+  );
+  const thumbnailUrlPromise = cloudFrontService.generateSignedUrl(
+    user.username,
+    thumbnailStorageKey,
+    Date.now() + 3600
+  );
 
-  const [videoUrl, thumbnailUrl] = await Promise.all([videoUrlPromise, thumbnailUrlPromise]);
+  const [videoUrl, thumbnailUrl] = await Promise.all([
+    videoUrlPromise,
+    thumbnailUrlPromise,
+  ]);
 
   // flattening tag objects
-  const data: Omit<typeof video, "tags" | "storageKey" | "thumbnailStorageKey"> & {
+  const data: Omit<
+    typeof video,
+    "tags" | "storageKey" | "thumbnailStorageKey"
+  > & {
     tags: { id: number; name: string }[];
     videoUrl: string;
     thumbnailUrl: string;

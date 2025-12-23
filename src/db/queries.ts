@@ -1,5 +1,5 @@
 import type { DrizzleError } from "drizzle-orm";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index.js";
 import { HttpStatusCode } from "../utils/HttpStatusCode.js";
 import AppError from "../utils/AppError.js";
@@ -55,6 +55,33 @@ export async function findVideoByPublicKey(publicKey: string) {
       `DB Error: finding video by public key ${publicKey} failed. Error message: ${
         (err as DrizzleError).message
       }`,
+      HttpStatusCode.SERVER_ERROR,
+      false
+    );
+  }
+}
+
+export async function getUploadedVideos() {
+  try {
+    const result = await db.query.videos.findMany({
+      where: ({ status }, { eq }) => eq(status, "UPLOADED"),
+      with: {
+        author: {
+          columns: {
+            id: false,
+            password: false,
+            salt: false,
+            createdAt: false,
+            email: false,
+          },
+        },
+        category: true,
+      },
+    });
+    return result;
+  } catch (err) {
+    throw new AppError(
+      `DB Error: failed to get a list of updated videos.`,
       HttpStatusCode.SERVER_ERROR,
       false
     );
@@ -149,6 +176,49 @@ export async function createVideoTx(
   } catch (err) {
     throw new AppError(
       `DB Error: create video transaction failed. Error Message: ${
+        (err as DrizzleError).message
+      }`,
+      HttpStatusCode.SERVER_ERROR,
+      false
+    );
+  }
+}
+
+export async function updateVideoStatus(storageKey: string, status: string) {
+  try {
+    await db
+      .update(videos)
+      .set({ status })
+      .where(eq(videos.storageKey, storageKey));
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError(
+      `DB Error: failed to change video storageKey: ${storageKey} status to ${status}: ${
+        (err as DrizzleError).message
+      }`,
+      HttpStatusCode.SERVER_ERROR,
+      false
+    );
+  }
+}
+
+export async function updateStatusForMultipleVideos(
+  keys: string[],
+  status: string
+) {
+  try {
+    await db
+      .update(videos)
+      .set({ status })
+      .where(inArray(videos.storageKey, keys));
+  } catch (err) {
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError(
+      `DB Error: failed to update status for multiple videos: ${
         (err as DrizzleError).message
       }`,
       HttpStatusCode.SERVER_ERROR,

@@ -26,6 +26,7 @@ export const videos = pgTable("videos", {
   category: integer("category").references(() => categories.id, {
     onDelete: "set null",
   }),
+  status: varchar("status", { length: 24 }).notNull().default("PROCESSING"),
   isForKids: boolean("is_for_kids").default(false),
   isAgeRestricted: boolean("is_age_restricted").default(false),
   allowComments: boolean("allow_comments").default(true),

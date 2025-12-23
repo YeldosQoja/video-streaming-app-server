@@ -1,0 +1,1 @@
+ALTER TABLE "videos" ADD COLUMN "status" varchar(24) DEFAULT 'PROCESSING' NOT NULL;
