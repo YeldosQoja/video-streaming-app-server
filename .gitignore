@@ -4,4 +4,3 @@ dist/
 .vscode/
 assets/
 private_key.pem
-aws-mediaconvert-job-desc.json

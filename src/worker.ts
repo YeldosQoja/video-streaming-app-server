@@ -5,7 +5,6 @@ import {
   Message,
   ReceiveMessageCommand,
   SQSClient,
-  SQSServiceException,
 } from "@aws-sdk/client-sqs";
 import dotenv from "dotenv";
 import { getAwsConfig } from "./config/aws.js";
@@ -33,14 +32,14 @@ const receiveMessage = (queueUrl: string) =>
 
 const processMessages = async (messages: Message[]) => {
   if (messages.length === 1) {
-    console.log("MessageId:", messages[0]?.MessageId);
     const body = JSON.parse(messages[0]?.Body ?? "");
     const {
-      s3: { object: { key } },
+      s3: {
+        object: { key },
+      },
     } = body.Records[0];
     const storageKey = (key as string).split("/")[2] as string;
-    console.log({ storageKey });
-    await updateVideoStatus(storageKey, "UPLOADED");
+    await updateVideoStatus(storageKey, "PROCESSED");
   } else {
     const keys = messages.map((message) => {
       const body = JSON.parse(message.Body ?? "");
@@ -52,7 +51,7 @@ const processMessages = async (messages: Message[]) => {
       const storageKey = (key as string).split("/")[2] as string;
       return storageKey;
     });
-    await updateStatusForMultipleVideos([...new Set(keys)], "UPLOADED");
+    await updateStatusForMultipleVideos([...new Set(keys)], "PROCESSED");
   }
 };
 

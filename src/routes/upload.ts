@@ -60,11 +60,11 @@ router.post("/multipart/start", async (req, res) => {
 
   const urls = await Promise.all(
     Array.from({ length: partCount }, async (_, i) => {
-      const partNumber = i + 1;
-      const partCommand = s3Service.createPartUpload(key, UploadId, partNumber);
+      const PartNumber = i + 1;
+      const partCommand = s3Service.createPartUpload(key, UploadId, PartNumber);
       const url = await s3Service.getSignedUrl(partCommand);
 
-      return { partNumber, url };
+      return { PartNumber, url };
     })
   );
 
