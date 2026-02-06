@@ -22,19 +22,24 @@ dotenv.config();
 // For cloud front private key
 fs.writeFileSync("/tmp/private_key.pem", process.env["CDN_PRIVATE_KEY"] || "");
 const port = process.env["PORT"];
+const sessionSecret = process.env["SESSION_SECRET"] as string;
+const userSessionsTable = process.env["SESSION_TABLE"] || "user_sessions";
+const env = process.env["NODE_ENV"] || "development";
 
 app.use(
   session({
-    secret: "some secret",
+    secret: sessionSecret,
     store: new (connectPgSimple(session))({
       pool,
-      tableName: "user_sessions",
+      tableName: userSessionsTable,
       createTableIfMissing: true,
     }),
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
+      secure: env === "production",
+      sameSite: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     },
   })
@@ -57,7 +62,7 @@ app.use(handleError);
 
 process.on("uncaughtException", (error) => {
   errorHandler.handle(
-    new AppError(error.message, HttpStatusCode.SERVER_ERROR, false), 
+    new AppError(error.message, HttpStatusCode.SERVER_ERROR, false)
   );
 });
 
